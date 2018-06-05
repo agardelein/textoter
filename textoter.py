@@ -15,6 +15,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
     def __init__(self, app):
         Gtk.ApplicationWindow.__init__(self, title='Textoter', application=app)
         self.builder = Gtk.Builder()
+        self.app = app
         try:
             self.builder = Gtk.Builder.new_from_file("textoter.glade")
         except:
@@ -41,7 +42,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
         t = tb.get_text(tb.get_start_iter(),tb.get_end_iter(), True)
 
         content = '\n'.join((' '.join(('To:', num)), '', t))
-        fp = tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix='arnaud-', dir='/var/spool/sms/outgoing/')
+        fp = tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix='arnaud-', dir=self.app.actions['outgoing_dir'][1])
         os.chmod(fp.name, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
         fp.write(content)
         fp.close()
@@ -66,6 +67,7 @@ class TextoterApplication(Gtk.Application):
         Gtk.Application.do_startup(self)
         self.init_config()
         self.read_config()
+        print(self.actions)
 
     def init_config(self):
         # Initializa configuration stuff
@@ -85,7 +87,7 @@ class TextoterApplication(Gtk.Application):
     def actions_from_config(self, config):
         section = TextoterApplication.SECTION
         outgoing_dir = config.get(section, TextoterApplication.OUTGOING_DIR)
-        outgoing_dir = self.sanitize_list(outgoing_dir)
+        outgoing_dir = outgoing_dir.strip()
 
         history_list = config.get(section, TextoterApplication.HISTORY_LIST)
         history_list = self.sanitize_list(history_list)

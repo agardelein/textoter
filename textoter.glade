@@ -53,7 +53,7 @@
                 <property name="can_focus">True</property>
                 <property name="can_default">True</property>
                 <property name="max_length">20</property>
-                <property name="placeholder_text" translatable="yes">33620255240</property>
+                <property name="placeholder_text" translatable="yes">Phone number</property>
               </object>
             </child>
           </object>
