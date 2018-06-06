@@ -48,6 +48,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
         fp.close()
 
     def cancel_clicked(self, button):
+        self.app.write_config()
         sys.exit()
         
 class TextoterApplication(Gtk.Application):
@@ -98,11 +99,12 @@ class TextoterApplication(Gtk.Application):
         return actions
 
     def actions_to_config(self, actions, config):
+        print(actions)
         section = TextoterApplication.SECTION
-        outgoing_dir = ';'.join(actions['outgoing_dir'][1])
+        outgoing_dir = actions['outgoing_dir'][1]
         history_list = ';'.join(actions['history_list'][1])
-        config.set(section, TextoterApplication.OUTGOING_DIR)
-        config.set(section, TextoterApplication.HISTORY_LIST)
+        config.set(section, TextoterApplication.OUTGOING_DIR, outgoing_dir)
+        config.set(section, TextoterApplication.HISTORY_LIST, history_list)
     
     def read_config(self):
         self.config.read(self.config_file)
