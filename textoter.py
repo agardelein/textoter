@@ -9,6 +9,8 @@ import configparser
 from xdg import BaseDirectory
 
 DEFAULT_OUTGOING_DIR = '/var/spool/sms/outgoing/'
+DEFAULT_SENT_DIR = '/var/spool/sms/sent/'
+DEFAULT_CHECKED_DIR = '/var/spool/sms/checked/'
 
 
 class TextoterWindow(Gtk.ApplicationWindow):
@@ -55,6 +57,8 @@ class TextoterApplication(Gtk.Application):
 
     SECTION = 'Textoter'
     OUTGOING_DIR = 'outgoing_dir'
+    CHECKED_DIR = 'checked_dir'
+    SENT_DIR = 'sent_dir'
     HISTORY_LIST = 'numbers'
     
     def __init__(self):
@@ -80,6 +84,8 @@ class TextoterApplication(Gtk.Application):
 
         # Defaults
         self.config.set(section, TextoterApplication.OUTGOING_DIR, DEFAULT_OUTGOING_DIR)
+        self.config.set(section, TextoterApplication.CHECKED_DIR, DEFAULT_CHECKED_DIR)
+        self.config.set(section, TextoterApplication.SENT_DIR, DEFAULT_SENT_DIR)
         self.config.set(section, TextoterApplication.HISTORY_LIST, '')
 
     def sanitize_list(self, lst):
@@ -89,11 +95,17 @@ class TextoterApplication(Gtk.Application):
         section = TextoterApplication.SECTION
         outgoing_dir = config.get(section, TextoterApplication.OUTGOING_DIR)
         outgoing_dir = outgoing_dir.strip()
+        checked_dir = config.get(section, TextoterApplication.CHECKED_DIR)
+        checked_dir = checked_dir.strip()
+        sent_dir = config.get(section, TextoterApplication.SENT_DIR)
+        sent_dir = sent_dir.strip()
 
         history_list = config.get(section, TextoterApplication.HISTORY_LIST)
         history_list = self.sanitize_list(history_list)
         actions = {
             'outgoing_dir': (True, outgoing_dir),
+            'checked_dir': (True, checked_dir),
+            'sent_dir': (True, sent_dir),
             'history_list': (True, history_list)
         }
         return actions
@@ -102,8 +114,12 @@ class TextoterApplication(Gtk.Application):
         print(actions)
         section = TextoterApplication.SECTION
         outgoing_dir = actions['outgoing_dir'][1]
+        checked_dir = actions['checked_dir'][1]
+        sent_dir = actions['sent_dir'][1]
         history_list = ';'.join(actions['history_list'][1])
         config.set(section, TextoterApplication.OUTGOING_DIR, outgoing_dir)
+        config.set(section, TextoterApplication.CHECKED_DIR, checked_dir)
+        config.set(section, TextoterApplication.SENT_DIR, sent_dir)
         config.set(section, TextoterApplication.HISTORY_LIST, history_list)
     
     def read_config(self):
