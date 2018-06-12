@@ -2,6 +2,7 @@
 
 import gi
 gi.require_version('Gtk', '3.0')
+gi.require_version('Notify', '0.7')
 from gi.repository import Gtk
 from gi.repository import Gio
 from gi.repository import Notify
@@ -40,7 +41,6 @@ class TextoterWindow(Gtk.ApplicationWindow):
         self.sms_content_text_view = self.builder.get_object('SMSTextView')
         
     def ok_clicked(self, button):
-        print('ok!')
         num = self.phone_number_entry.get_text()
         tb = self.sms_content_text_view.get_buffer()
         
@@ -51,6 +51,10 @@ class TextoterWindow(Gtk.ApplicationWindow):
         os.chmod(fp.name, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
         fp.write(content)
         fp.close()
+        if not num in self.app.actions['history_list'][1]:
+            self.app.actions['history_list'][1].append(num)
+        if len(self.app.actions['history_list'][1]) > 10:
+            self.app.actions['history_list'][1] = self.app.actions['history_list'][1][0:10]
 
     def cancel_clicked(self, button):
         self.app.write_config()
@@ -96,23 +100,48 @@ class TextoterApplication(Gtk.Application):
 #        print((file1.get_parse_name() if file1 else file1 , file2.get_parse_name() if file2 else file2, evt_type))
         if evt_type != Gio.FileMonitorEvent.CREATED:
             return
-        with open(file1.get_parse_name()) as f:
-            line = f.readline()
-            fields = line.split()
-            if fields[0] == 'To:':
-                num = fields[1]
-                self.send_notification('Message sent', 'To +%s' % num)
+        try:
+            with open(file1.get_parse_name()) as f:
+                line = f.readline()
+                fields = line.split()
+                if fields[0] == 'To:':
+                    num = fields[1]
+                    self.send_notification('Message sent', 'To +%s' % num)
+        except:
+            # File not accessible or not existing anymore (e.g. start of daemon)
+            pass
+            
 
     def failed_dir_changed(self, monitor, file1, file2, evt_type):
 #        print((file1.get_parse_name() if file1 else file1 , file2.get_parse_name() if file2 else file2, evt_type))
         if evt_type != Gio.FileMonitorEvent.CREATED:
             return
-        with open(file1.get_parse_name()) as f:
-            line = f.readline()
-            fields = line.split()
-            if fields[0] == 'To:':
-                num = fields[1]
-                self.send_notification('Message failed', 'To +%s' % num)
+        try:
+            with open(file1.get_parse_name()) as f:
+                line = f.readline()
+                # Retrieve the phone number
+                fields = line.split()
+                
+                # Parse file for fail reason
+                while f:
+                    line = f.readline()
+                    if line.startswith('Fail_reason'):
+                        break
+                reason = ''
+                if f:
+                    # Fail reason found before end of file
+                    fields2 = line.split()
+                    reason = ' (Reason: ' + ' '.join(fields2[1:]) + ')'
+
+                # Notify the fail reason
+                if fields[0] == 'To:':
+                    num = fields[1]
+                    self.send_notification('Message failed%s' % (reason),
+                                           'To +%s' % num)
+        except Exception as e:
+            # File not accessible or not existing anymore (e.g. start of daemon)
+            # print('Exception', e)
+            pass
 
     def init_config(self):
         # Initialize configuration stuff
@@ -127,10 +156,13 @@ class TextoterApplication(Gtk.Application):
         self.config.set(section, TextoterApplication.CHECKED_DIR, DEFAULT_CHECKED_DIR)
         self.config.set(section, TextoterApplication.SENT_DIR, DEFAULT_SENT_DIR)
         self.config.set(section, TextoterApplication.FAILED_DIR, DEFAULT_FAILED_DIR)
-        self.config.set(section, TextoterApplication.HISTORY_LIST, '')
+        self.config.set(section, TextoterApplication.HISTORY_LIST, [])
 
     def sanitize_list(self, lst):
-        return [x for x in [x.strip() for x in lst] if len(x) > 0]
+        if isinstance(lst, list):
+            return [x for x in [x.strip() for x in lst] if len(x) > 0]
+        else:
+            return [lst.strip()]
 
     def actions_from_config(self, config):
         section = TextoterApplication.SECTION
