@@ -159,10 +159,7 @@ class TextoterApplication(Gtk.Application):
         self.config.set(section, TextoterApplication.HISTORY_LIST, [])
 
     def sanitize_list(self, lst):
-        if isinstance(lst, list):
-            return [x for x in [x.strip() for x in lst] if len(x) > 0]
-        else:
-            return [lst.strip()]
+        return [x for x in [x.strip() for x in lst] if len(x) > 0]
 
     def actions_from_config(self, config):
         section = TextoterApplication.SECTION
@@ -176,7 +173,7 @@ class TextoterApplication(Gtk.Application):
         failed_dir = failed_dir.strip()
 
         history_list = config.get(section, TextoterApplication.HISTORY_LIST)
-        history_list = self.sanitize_list(history_list)
+        history_list = self.sanitize_list(history_list.split(';'))
         actions = {
             'outgoing_dir': (True, outgoing_dir),
             'checked_dir': (True, checked_dir),
