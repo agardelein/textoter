@@ -39,6 +39,12 @@ class TextoterWindow(Gtk.ApplicationWindow):
 
         self.phone_number_entry = self.builder.get_object('PhoneNumberEntry')
         self.sms_content_text_view = self.builder.get_object('SMSTextView')
+        self.store = self.builder.get_object('store')
+        for num in self.app.actions['history_list'][1]:
+            print(num)
+            iter = self.store.append([num])
+        cbx = self.builder.get_object('PhoneNumberComboBox')
+        cbx.set_entry_text_column(0)
         
     def ok_clicked(self, button):
         num = self.phone_number_entry.get_text()

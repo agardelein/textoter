@@ -2,6 +2,12 @@
 <!-- Generated with glade 3.20.0 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
+  <object class="GtkListStore" id="store">
+    <columns>
+      <!-- column-name String -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="GtkBox" id="TextoterBox">
     <property name="visible">True</property>
     <property name="can_focus">False</property>
@@ -47,6 +53,9 @@
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="margin_right">10</property>
+            <property name="model">store</property>
+            <property name="id_column">0</property>
+            <property name="active_id">0</property>
             <property name="has_entry">True</property>
             <child internal-child="entry">
               <object class="GtkEntry" id="PhoneNumberEntry">
