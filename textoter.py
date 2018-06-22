@@ -10,6 +10,7 @@ import sys, os, stat
 import tempfile
 import configparser
 from xdg import BaseDirectory
+import locale
 
 DEFAULT_OUTGOING_DIR = '/var/spool/sms/outgoing/'
 DEFAULT_SENT_DIR = '/var/spool/sms/sent/'
@@ -50,7 +51,8 @@ class TextoterWindow(Gtk.ApplicationWindow):
         num = self.phone_number_entry.get_text()
 
         # Process specific for France
-        if num.startswith('06') or num.startswith('07'):
+        if locale.getlocale()[0].startswith('fr') and\
+           (num.startswith('06') or num.startswith('07')):
             num = '33' + num[1:]
 
         tb = self.sms_content_text_view.get_buffer()
