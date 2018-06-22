@@ -1,4 +1,17 @@
 #!/usr/bin/python3
+# Textoter: A stupid application to send sms with smsd (smstools)
+# Copyright (C) 2018 Arnaud Gardelein <arnaud@oscopy.org>
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public License for more details.
+#
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -17,8 +30,8 @@ DEFAULT_SENT_DIR = '/var/spool/sms/sent/'
 DEFAULT_CHECKED_DIR = '/var/spool/sms/checked/'
 DEFAULT_FAILED_DIR = '/var/spool/sms/failed/'
 
-
 class TextoterWindow(Gtk.ApplicationWindow):
+    # The main window
     def __init__(self, app):
         Gtk.ApplicationWindow.__init__(self, title='Textoter', application=app)
         self.builder = Gtk.Builder()
@@ -48,6 +61,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
         cbx.set_entry_text_column(0)
         
     def ok_clicked(self, button):
+        # Send message
         num = self.phone_number_entry.get_text()
 
         # Process specific for France
@@ -61,11 +75,14 @@ class TextoterWindow(Gtk.ApplicationWindow):
         if not t:
             return
 
+        # Create the file in the outgoing directory
         content = '\n'.join((' '.join(('To:', num)), '', t))
         fp = tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix='arnaud-', dir=self.app.actions['outgoing_dir'][1])
         os.chmod(fp.name, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
         fp.write(content)
         fp.close()
+
+        # Manage history
         history_list = self.app.actions['history_list'][1]
         if num in history_list:
             history_list.remove(num)
@@ -74,6 +91,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
         history_list = history_list[0:10]
         self.app.actions['history_list'] = (self.app.actions['history_list'][0],
                                             history_list)
+        # Manage history in the store
         def func(model, path, iter, num):
             # Remove the first occurrence of number
             if model.get_value(iter, 0) == num:
@@ -85,6 +103,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
         iter = self.store.prepend([num])
 
     def cancel_clicked(self, button):
+        # Quit
         self.app.write_config()
         sys.exit()
         
@@ -102,10 +121,12 @@ class TextoterApplication(Gtk.Application):
         Notify.init('Textoter')
 
     def do_activate(self):
+        # Setup the main window
         win = TextoterWindow(self)
         win.show_all()
 
     def do_startup(self):
+        # Read the configuration file, connect monitor to directories
         Gtk.Application.do_startup(self)
         self.init_config()
         self.read_config()
@@ -125,7 +146,7 @@ class TextoterApplication(Gtk.Application):
         pass
 
     def sent_dir_changed(self, monitor, file1, file2, evt_type):
-#        print((file1.get_parse_name() if file1 else file1 , file2.get_parse_name() if file2 else file2, evt_type))
+        # Send success notification when message is copied here
         if evt_type != Gio.FileMonitorEvent.CREATED:
             return
         try:
@@ -141,7 +162,7 @@ class TextoterApplication(Gtk.Application):
             
 
     def failed_dir_changed(self, monitor, file1, file2, evt_type):
-#        print((file1.get_parse_name() if file1 else file1 , file2.get_parse_name() if file2 else file2, evt_type))
+        # Send failure notification when message is copied here
         if evt_type != Gio.FileMonitorEvent.CREATED:
             return
         try:
@@ -187,9 +208,11 @@ class TextoterApplication(Gtk.Application):
         self.config.set(section, TextoterApplication.HISTORY_LIST, [])
 
     def sanitize_list(self, lst):
+        # Remove leading and trailing white spaces when creating the list
         return [x for x in [x.strip() for x in lst] if len(x) > 0]
 
     def actions_from_config(self, config):
+        # Retrieve infos from configuration file
         section = TextoterApplication.SECTION
         outgoing_dir = config.get(section, TextoterApplication.OUTGOING_DIR)
         outgoing_dir = outgoing_dir.strip()
@@ -212,6 +235,7 @@ class TextoterApplication(Gtk.Application):
         return actions
 
     def actions_to_config(self, actions, config):
+        # Send infos to configuration file
         print(actions)
         section = TextoterApplication.SECTION
         outgoing_dir = actions['outgoing_dir'][1]
@@ -226,19 +250,23 @@ class TextoterApplication(Gtk.Application):
         config.set(section, TextoterApplication.HISTORY_LIST, history_list)
     
     def read_config(self):
+        # Just read the configuration file
         self.config.read(self.config_file)
         self.actions = self.actions_from_config(self.config)
 
     def write_config(self):
+        # Just write the configuration file
         self.actions_to_config(self.actions, self.config)
         with open(self.config_file, 'w') as f:
             self.config.write(f)
 
     def send_notification(self, title, text, file_path_to_icon=''):
+        # Used to create and show the notification
         n = Notify.Notification.new(title, text, file_path_to_icon)
         n.set_timeout(5000)
         n.show()
-            
+
+# Go !
 app = TextoterApplication()
 exit_status = app.run(sys.argv)
 sys.exit(exit_status)
