@@ -70,7 +70,6 @@ class TextoterWindow(Gtk.ApplicationWindow):
             num = '33' + num[1:]
 
         tb = self.sms_content_text_view.get_buffer()
-        
         t = tb.get_text(tb.get_start_iter(),tb.get_end_iter(), True)
         if not t:
             return
@@ -119,11 +118,13 @@ class TextoterApplication(Gtk.Application):
     def __init__(self):
         Gtk.Application.__init__(self)
         Notify.init('Textoter')
+        self.win = None
 
     def do_activate(self):
         # Setup the main window
         win = TextoterWindow(self)
         win.show_all()
+        self.win = win
 
     def do_startup(self):
         # Read the configuration file, connect monitor to directories
@@ -143,7 +144,9 @@ class TextoterApplication(Gtk.Application):
 
     def checked_dir_changed(self, monitor, file1, file2, evt_type):
 #        print((file1.get_parse_name() if file1 else file1 , file2.get_parse_name() if file2 else file2, evt_type))
-        pass
+        self.win.phone_number_entry.set_text('')
+        tb = self.win.sms_content_text_view.get_buffer()
+        t = tb.delete(tb.get_start_iter(),tb.get_end_iter())
 
     def sent_dir_changed(self, monitor, file1, file2, evt_type):
         # Send success notification when message is copied here
