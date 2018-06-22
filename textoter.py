@@ -48,19 +48,39 @@ class TextoterWindow(Gtk.ApplicationWindow):
         
     def ok_clicked(self, button):
         num = self.phone_number_entry.get_text()
+
+        # Process specific for France
+        if num.startswith('06') or num.startswith('07'):
+            num = '33' + num[1:]
+
         tb = self.sms_content_text_view.get_buffer()
         
         t = tb.get_text(tb.get_start_iter(),tb.get_end_iter(), True)
+        if not t:
+            return
 
         content = '\n'.join((' '.join(('To:', num)), '', t))
         fp = tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix='arnaud-', dir=self.app.actions['outgoing_dir'][1])
         os.chmod(fp.name, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
         fp.write(content)
         fp.close()
-        if not num in self.app.actions['history_list'][1]:
-            self.app.actions['history_list'][1].append(num)
-        if len(self.app.actions['history_list'][1]) > 10:
-            self.app.actions['history_list'][1] = self.app.actions['history_list'][1][0:10]
+        history_list = self.app.actions['history_list'][1]
+        if num in history_list:
+            history_list.remove(num)
+        history_list = [num]
+        history_list.extend(self.app.actions['history_list'][1])
+        history_list = history_list[0:10]
+        self.app.actions['history_list'] = (self.app.actions['history_list'][0],
+                                            history_list)
+        def func(model, path, iter, num):
+            # Remove the first occurrence of number
+            if model.get_value(iter, 0) == num:
+                model.remove(iter)
+                return True
+            else:
+                return False
+        self.store.foreach(func, num)
+        iter = self.store.prepend([num])
 
     def cancel_clicked(self, button):
         self.app.write_config()
