@@ -16,26 +16,80 @@
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Notify', '0.7')
+from gi.repository import GLib
 from gi.repository import Gtk
 from gi.repository import Gio
 from gi.repository import Notify
-import sys, os, stat
+import sys, os, stat, traceback
 import tempfile
 import configparser
 from xdg import BaseDirectory
 import locale
 
-DEFAULT_OUTGOING_DIR = '/var/spool/sms/outgoing/'
-DEFAULT_SENT_DIR = '/var/spool/sms/sent/'
-DEFAULT_CHECKED_DIR = '/var/spool/sms/checked/'
-DEFAULT_FAILED_DIR = '/var/spool/sms/failed/'
+DBUS_NAME = 'org.bluez.obex'
+DBUS_PATH = '/org/bluez/obex'
+devad = '88:51:7A:01:86:98'
+
+header = 'BEGIN:BMSG\r\nVERSION:1.0\r\nSTATUS:READ\r\nTYPE:MMS\r\nFOLDER:null\r\nBEGIN:BENV\r\n'
+footer = 'END:BENV\r\nEND:BMSG\r\n'
+vcard = 'BEGIN:VCARD\r\nVERSION:2.1\r\nN:null;;;;\r\nTEL:+33620255240\r\nEND:VCARD\r\n'
+body = 'BEGIN:BBODY\r\nLENGTH:39\r\nBEGIN:MSG\r\nThis is a new msg\r\nEND:MSG\r\nEND:BBODY\r\n'
+msg = header + vcard + body + footer
+
+class BTMessage:
+    def __init__(self, bus_name=DBUS_NAME, bus_path=DBUS_PATH):
+        self.bus_name = bus_name
+        self.bus_path = bus_path
+        self.bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+    
+    def create_session(self):
+        self.path = self.bus.call_sync(self.bus_name,
+                                  self.bus_path,
+                                  'org.bluez.obex.Client1',
+                                  'CreateSession',
+                                  GLib.Variant('(sa{sv})',
+                                               (devad,
+                                                {'Target': GLib.Variant('s', 'map'),
+                                                 'Channel': GLib.Variant('y', 21),
+                                                 }
+                                                )),
+                                  None,  # reply_type
+                                  Gio.DBusCallFlags.NONE, # flags
+                                  -1, # Timeout
+                                  None, # Cancellable
+                                  )
+
+    def remove_session(self):
+        res = self.bus.call_sync(self.bus_name,
+                            self.bus_path,
+                            'org.bluez.obex.Client1',
+                            'RemoveSession',
+                            self.path,
+                            None,  # reply_type
+                            Gio.DBusCallFlags.NONE, # flags
+                            -1, # Timeout
+                            None, # Cancellable
+                            )
+
+    def push_message(self, filename):
+        res = self.bus.call_sync(self.bus_name,
+                            self.path[0],
+                            'org.bluez.obex.MessageAccess1',
+                            'PushMessage',
+                            GLib.Variant('(ssa{sv})', (filename, '/telecom/msg/outbox', {},)), # Parameters
+                            None, # reply_type
+                            Gio.DBusCallFlags.NONE, # flags
+                            2400000, # Timeout
+                            None, # Cancellable
+                            )
 
 class TextoterWindow(Gtk.ApplicationWindow):
     # The main window
-    def __init__(self, app):
+    def __init__(self, app, btmessage):
         Gtk.ApplicationWindow.__init__(self, title='Textoter', application=app)
         self.builder = Gtk.Builder()
         self.app = app
+        self.btmessage = btmessage
         try:
             self.builder = Gtk.Builder.new_from_file("textoter.glade")
         except:
@@ -76,10 +130,14 @@ class TextoterWindow(Gtk.ApplicationWindow):
 
         # Create the file in the outgoing directory
         content = '\n'.join((' '.join(('To:', num)), '', t))
-        fp = tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix='arnaud-', dir=self.app.actions['outgoing_dir'][1])
+        fp = tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix='arnaud-', dir='/tmp')
         os.chmod(fp.name, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-        fp.write(content)
+        print('name: <{}>, content <{}>'.format(fp.name, msg))
+        fp.write(msg)
         fp.close()
+        self.btmessage.create_session()
+        self.btmessage.push_message(fp.name)
+        self.btmessage.remove_session()
 
         # Manage history
         history_list = self.app.actions['history_list'][1]
@@ -109,20 +167,17 @@ class TextoterWindow(Gtk.ApplicationWindow):
 class TextoterApplication(Gtk.Application):
 
     SECTION = 'Textoter'
-    OUTGOING_DIR = 'outgoing_dir'
-    CHECKED_DIR = 'checked_dir'
-    SENT_DIR = 'sent_dir'
-    FAILED_DIR = 'failed_dir'
     HISTORY_LIST = 'numbers'
     
     def __init__(self):
         Gtk.Application.__init__(self)
         Notify.init('Textoter')
         self.win = None
+        self.bt = BTMessage()
 
     def do_activate(self):
         # Setup the main window
-        win = TextoterWindow(self)
+        win = TextoterWindow(self, self.bt)
         win.show_all()
         self.win = win
 
@@ -132,69 +187,70 @@ class TextoterApplication(Gtk.Application):
         self.init_config()
         self.read_config()
         print(self.actions)
-        checked_dir = Gio.file_parse_name(self.actions['checked_dir'][1])
-        self.checked_dir_monitor = checked_dir.monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
-        self.checked_dir_monitor.connect('changed', self.checked_dir_changed)
-        sent_dir = Gio.file_parse_name(self.actions['sent_dir'][1])
-        self.sent_dir_monitor = sent_dir.monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
-        self.sent_dir_monitor.connect('changed', self.sent_dir_changed)
-        failed_dir = Gio.file_parse_name(self.actions['failed_dir'][1])
-        self.failed_dir_monitor = failed_dir.monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
-        self.failed_dir_monitor.connect('changed', self.failed_dir_changed)
 
-    def checked_dir_changed(self, monitor, file1, file2, evt_type):
-#        print((file1.get_parse_name() if file1 else file1 , file2.get_parse_name() if file2 else file2, evt_type))
-        self.win.phone_number_entry.set_text('')
-        tb = self.win.sms_content_text_view.get_buffer()
-        t = tb.delete(tb.get_start_iter(),tb.get_end_iter())
+#     def checked_dir_changed(self, monitor, file1, file2, evt_type):
+# #        print((file1.get_parse_name() if file1 else file1 , file2.get_parse_name() if file2 else file2, evt_type))
+#         self.win.phone_number_entry.set_text('')
+#         tb = self.win.sms_content_text_view.get_buffer()
+#         t = tb.delete(tb.get_start_iter(),tb.get_end_iter())
+#         return True
 
-    def sent_dir_changed(self, monitor, file1, file2, evt_type):
-        # Send success notification when message is copied here
-        if evt_type != Gio.FileMonitorEvent.CREATED:
-            return
-        try:
-            with open(file1.get_parse_name()) as f:
-                line = f.readline()
-                fields = line.split()
-                if fields[0] == 'To:':
-                    num = fields[1]
-                    self.send_notification('Message sent', 'To +%s' % num)
-        except:
-            # File not accessible or not existing anymore (e.g. start of daemon)
-            pass
-            
+#     def sent_dir_changed(self, monitor, file1, file2, evt_type):
+#         # Send success notification when message is copied here
+#         if evt_type != Gio.FileMonitorEvent.CREATED:
+#             return False
+#         try:
+#             with open(file1.get_parse_name()) as f:
+#                 line = f.readline()
+#                 fields = line.split()
+#                 if fields[0] == 'To:':
+#                     num = fields[1]
+#                     self.send_notification('Message sent', 'To +%s' % num)
+#         except Exception as e:
+#             # File not accessible or not existing anymore (e.g. start of daemon)
+#             print('Exception in Sent', e)
+#             print("-"*60)
+#             traceback.print_exc(file=sys.stdout)
+#             print("-"*60)
+#             return False
+#         return True
 
-    def failed_dir_changed(self, monitor, file1, file2, evt_type):
-        # Send failure notification when message is copied here
-        if evt_type != Gio.FileMonitorEvent.CREATED:
-            return
-        try:
-            with open(file1.get_parse_name()) as f:
-                line = f.readline()
-                # Retrieve the phone number
-                fields = line.split()
+#     def failed_dir_changed(self, monitor, file1, file2, evt_type):
+#         # Send failure notification when message is copied here
+#         if evt_type != Gio.FileMonitorEvent.CREATED:
+#             return False
+#         try:
+#             with open(file1.get_parse_name()) as f:
+#                 line = f.readline()
+#                 # Retrieve the phone number
+#                 fields = line.split()
                 
-                # Parse file for fail reason
-                while f:
-                    line = f.readline()
-                    if line.startswith('Fail_reason'):
-                        break
-                reason = ''
-                if f:
-                    # Fail reason found before end of file
-                    fields2 = line.split()
-                    reason = ' (Reason: ' + ' '.join(fields2[1:]) + ')'
+#                 # Parse file for fail reason
+#                 while f:
+#                     line = f.readline()
+#                     if line.startswith('Fail_reason'):
+#                         break
+#                 reason = ''
+#                 if f:
+#                     # Fail reason found before end of file
+#                     fields2 = line.split()
+#                     reason = ' (Reason: ' + ' '.join(fields2[1:]) + ')'
 
-                # Notify the fail reason
-                if fields[0] == 'To:':
-                    num = fields[1]
-                    self.send_notification('Message failed%s' % (reason),
-                                           'To +%s' % num)
-        except Exception as e:
-            # File not accessible or not existing anymore (e.g. start of daemon)
-            # print('Exception', e)
-            pass
-
+#                 # Notify the fail reason
+#                 if fields[0] == 'To:':
+#                     num = fields[1]
+#                     self.send_notification('Message failed%s' % (reason),
+#                                            'To +%s' % num)
+#         except Exception as e:
+#             # File not accessible or not existing anymore (e.g. start of daemon)
+#             print('Exception in Failed:', e)
+#             print("-"*60)
+#             traceback.print_exc(file=sys.stdout)
+#             print("-"*60)
+#             return False
+#             pass
+#         return True
+    
     def init_config(self):
         # Initialize configuration stuff
         path = BaseDirectory.save_config_path('textoter')
@@ -204,10 +260,6 @@ class TextoterApplication(Gtk.Application):
         self.config.add_section(section)
 
         # Defaults
-        self.config.set(section, TextoterApplication.OUTGOING_DIR, DEFAULT_OUTGOING_DIR)
-        self.config.set(section, TextoterApplication.CHECKED_DIR, DEFAULT_CHECKED_DIR)
-        self.config.set(section, TextoterApplication.SENT_DIR, DEFAULT_SENT_DIR)
-        self.config.set(section, TextoterApplication.FAILED_DIR, DEFAULT_FAILED_DIR)
         self.config.set(section, TextoterApplication.HISTORY_LIST, [])
 
     def sanitize_list(self, lst):
@@ -217,22 +269,10 @@ class TextoterApplication(Gtk.Application):
     def actions_from_config(self, config):
         # Retrieve infos from configuration file
         section = TextoterApplication.SECTION
-        outgoing_dir = config.get(section, TextoterApplication.OUTGOING_DIR)
-        outgoing_dir = outgoing_dir.strip()
-        checked_dir = config.get(section, TextoterApplication.CHECKED_DIR)
-        checked_dir = checked_dir.strip()
-        sent_dir = config.get(section, TextoterApplication.SENT_DIR)
-        sent_dir = sent_dir.strip()
-        failed_dir = config.get(section, TextoterApplication.FAILED_DIR)
-        failed_dir = failed_dir.strip()
 
         history_list = config.get(section, TextoterApplication.HISTORY_LIST)
         history_list = self.sanitize_list(history_list.split(';'))
         actions = {
-            'outgoing_dir': (True, outgoing_dir),
-            'checked_dir': (True, checked_dir),
-            'sent_dir': (True, sent_dir),
-            'failed_dir': (True, failed_dir),
             'history_list': (True, history_list)
         }
         return actions
@@ -241,15 +281,7 @@ class TextoterApplication(Gtk.Application):
         # Send infos to configuration file
         print(actions)
         section = TextoterApplication.SECTION
-        outgoing_dir = actions['outgoing_dir'][1]
-        checked_dir = actions['checked_dir'][1]
-        sent_dir = actions['sent_dir'][1]
-        failed_dir = actions['failed_dir'][1]
         history_list = ';'.join(actions['history_list'][1])
-        config.set(section, TextoterApplication.OUTGOING_DIR, outgoing_dir)
-        config.set(section, TextoterApplication.CHECKED_DIR, checked_dir)
-        config.set(section, TextoterApplication.SENT_DIR, sent_dir)
-        config.set(section, TextoterApplication.FAILED_DIR, failed_dir)
         config.set(section, TextoterApplication.HISTORY_LIST, history_list)
     
     def read_config(self):
