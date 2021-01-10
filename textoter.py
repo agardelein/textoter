@@ -35,6 +35,11 @@ footer = 'END:BENV\r\nEND:BMSG\r\n'
 vcard = 'BEGIN:VCARD\r\nVERSION:2.1\r\nN:null;;;;\r\nTEL:+33620255240\r\nEND:VCARD\r\n'
 body = 'BEGIN:BBODY\r\nLENGTH:39\r\nBEGIN:MSG\r\nThis is a new msg\r\nEND:MSG\r\nEND:BBODY\r\n'
 msg = header + vcard + body + footer
+vcard2 = 'BEGIN:VCARD\r\nVERSION:2.1\r\nN:null;;;;\r\nTEL:{}\r\nEND:VCARD\r\n'
+body2 = 'BEGIN:BBODY\r\nLENGTH:{}\r\nBEGIN:MSG\r\n{}\r\nEND:MSG\r\nEND:BBODY\r\n'
+msg_header = 'BEGIN:MSG\r\n'
+msg_footer = '\r\nEND:MSG\r\n'
+msg_length = 'BEGIN:BBODY\r\nLENGTH:{}\r\n'
 
 class BTMessage:
     def __init__(self, bus_name=DBUS_NAME, bus_path=DBUS_PATH):
@@ -121,7 +126,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
         # Process specific for France
         if locale.getlocale()[0].startswith('fr') and\
            (num.startswith('06') or num.startswith('07')):
-            num = '33' + num[1:]
+            num = '+33' + num[1:]
 
         tb = self.sms_content_text_view.get_buffer()
         t = tb.get_text(tb.get_start_iter(),tb.get_end_iter(), True)
@@ -133,7 +138,11 @@ class TextoterWindow(Gtk.ApplicationWindow):
         fp = tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix='arnaud-', dir='/tmp')
         os.chmod(fp.name, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
         print('name: <{}>, content <{}>'.format(fp.name, msg))
-        fp.write(msg)
+        my_msg = msg_header + t.replace('\n', '\r\n') + msg_footer
+        my_msg_l = msg_length.format(len(my_msg)) + my_msg
+        m = header + vcard2.format(num) + my_msg_l + footer
+        print('m <{}>'.format(m))
+        fp.write(m)
         fp.close()
         self.btmessage.create_session()
         self.btmessage.push_message(fp.name)
