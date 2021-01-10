@@ -87,6 +87,7 @@ class BTMessage:
                             2400000, # Timeout
                             None, # Cancellable
                             )
+        return res[1]['Status'] == 'queued'
 
 class TextoterWindow(Gtk.ApplicationWindow):
     # The main window
@@ -145,8 +146,12 @@ class TextoterWindow(Gtk.ApplicationWindow):
         fp.write(m)
         fp.close()
         self.btmessage.create_session()
-        self.btmessage.push_message(fp.name)
+        res = self.btmessage.push_message(fp.name)
         self.btmessage.remove_session()
+        if res:
+            self.send_notification('Message sent', 'To %s' % num)
+        else:
+            self.send_notification('Message failed', 'To %s' % num)
 
         # Manage history
         history_list = self.app.actions['history_list'][1]
@@ -172,7 +177,13 @@ class TextoterWindow(Gtk.ApplicationWindow):
         # Quit
         self.app.write_config()
         sys.exit()
-        
+
+    def send_notification(self, title, text, file_path_to_icon=''):
+        # Used to create and show the notification
+        n = Notify.Notification.new(title, text, file_path_to_icon)
+        n.set_timeout(5000)
+        n.show()
+
 class TextoterApplication(Gtk.Application):
 
     SECTION = 'Textoter'
@@ -303,12 +314,6 @@ class TextoterApplication(Gtk.Application):
         self.actions_to_config(self.actions, self.config)
         with open(self.config_file, 'w') as f:
             self.config.write(f)
-
-    def send_notification(self, title, text, file_path_to_icon=''):
-        # Used to create and show the notification
-        n = Notify.Notification.new(title, text, file_path_to_icon)
-        n.set_timeout(5000)
-        n.show()
 
 # Go !
 app = TextoterApplication()
