@@ -25,16 +25,15 @@ import tempfile
 import configparser
 from xdg import BaseDirectory
 import locale
+import xml.etree.ElementTree as ET
 
 DBUS_NAME = 'org.bluez.obex'
 DBUS_PATH = '/org/bluez/obex'
+DBUS_SYS_NAME = 'org.bluez'
+DBUS_SYS_PATH = '/org/bluez'
 devad = '88:51:7A:01:86:98'
+HCI = 'hci'
 
-header = 'BEGIN:BMSG\r\nVERSION:1.0\r\nSTATUS:READ\r\nTYPE:MMS\r\nFOLDER:null\r\nBEGIN:BENV\r\n'
-footer = 'END:BENV\r\nEND:BMSG\r\n'
-vcard = 'BEGIN:VCARD\r\nVERSION:2.1\r\nN:null;;;;\r\nTEL:+33620255240\r\nEND:VCARD\r\n'
-body = 'BEGIN:BBODY\r\nLENGTH:39\r\nBEGIN:MSG\r\nThis is a new msg\r\nEND:MSG\r\nEND:BBODY\r\n'
-msg = header + vcard + body + footer
 vcard2 = 'BEGIN:VCARD\r\nVERSION:2.1\r\nN:null;;;;\r\nTEL:{}\r\nEND:VCARD\r\n'
 body2 = 'BEGIN:BBODY\r\nLENGTH:{}\r\nBEGIN:MSG\r\n{}\r\nEND:MSG\r\nEND:BBODY\r\n'
 msg_header = 'BEGIN:MSG\r\n'
@@ -46,23 +45,85 @@ class BTMessage:
         self.bus_name = bus_name
         self.bus_path = bus_path
         self.bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+        self.sysbus = Gio.bus_get_sync(Gio.BusType.SYSTEM)
+        self.path = None
+
+    def introspect(self, bus, name, path):
+        res = bus.call_sync(name,
+                            path,
+                            'org.freedesktop.DBus.Introspectable',
+                            'Introspect',
+                            None, # Parameters
+                            GLib.VariantType('(s)'), # reply_type
+                            Gio.DBusCallFlags.NONE,  # flags
+                            -1,  # Timeout_msecs
+                            None, # Cancellable
+                            )
+        return res
+
+    def get_properties(self, bus, name, path):
+        res = bus.call_sync(name,
+                            path,
+                            'org.freedesktop.DBus.Properties',
+                            'GetAll',
+                            GLib.Variant('(s)', ('org.bluez.Device1',)), # Parameters
+                            GLib.VariantType('(a{sv})'), # reply_type
+                            Gio.DBusCallFlags.NONE,  # flags
+                            -1,  # Timeout_msecs
+                            None, # Cancellable
+                            )
+        return res
     
+    def get_devices(self):
+        # Look for adapter
+        res = self.introspect(self.sysbus, DBUS_SYS_NAME, DBUS_SYS_PATH)
+        root = ET.fromstring(res[0])
+        node = None
+        for child in root:
+            if child.tag == 'node' and\
+               child.attrib['name'].startswith(HCI):
+                # Take the first one
+                # FIXME: Maybe there can be other adapters
+                node = child.attrib['name']
+                break
+        if node is not None:
+            path = '/'.join((DBUS_SYS_PATH, node))
+            res = self.introspect(self.sysbus, DBUS_SYS_NAME, path)
+            rh = ET.fromstring(res[0])
+            devs = {}
+            for child in rh:
+                # Parse the adapter for devices
+                if child.tag == 'node' and\
+                   child.attrib['name'].startswith('dev'):
+                    # Retrieve properties of device
+                    r = self.get_properties(self.sysbus, DBUS_SYS_NAME,
+                                            '/'.join((path, child.attrib['name'])))
+                    devs[r[0]['Address']] = r[0]['Name']
+                    
+        return devs
+        
     def create_session(self):
-        self.path = self.bus.call_sync(self.bus_name,
-                                  self.bus_path,
-                                  'org.bluez.obex.Client1',
-                                  'CreateSession',
-                                  GLib.Variant('(sa{sv})',
-                                               (devad,
-                                                {'Target': GLib.Variant('s', 'map'),
-                                                 'Channel': GLib.Variant('y', 21),
-                                                 }
-                                                )),
-                                  None,  # reply_type
-                                  Gio.DBusCallFlags.NONE, # flags
-                                  -1, # Timeout
-                                  None, # Cancellable
-                                  )
+        try:
+            self.path = self.bus.call_sync(self.bus_name,
+                                           self.bus_path,
+                                           'org.bluez.obex.Client1',
+                                           'CreateSession',
+                                           GLib.Variant('(sa{sv})',
+                                                        (devad,
+                                                         {'Target': GLib.Variant('s', 'map'),
+                                                          'Channel': GLib.Variant('y', 21),
+                                                          }
+                                                         )),
+                                           None,  # reply_type
+                                           Gio.DBusCallFlags.NONE, # flags
+                                           -1, # Timeout
+                                           None, # Cancellable
+                                           )
+        except GLib.Error:
+            return None
+        finally:
+            print('path:', self.path)
+            return self.path
 
     def remove_session(self):
         res = self.bus.call_sync(self.bus_name,
@@ -145,13 +206,17 @@ class TextoterWindow(Gtk.ApplicationWindow):
         print('m <{}>'.format(m))
         fp.write(m)
         fp.close()
-        self.btmessage.create_session()
-        res = self.btmessage.push_message(fp.name)
-        self.btmessage.remove_session()
-        if res:
-            self.send_notification('Message sent', 'To %s' % num)
+        res = self.btmessage.create_session()
+        if not res:
+            self.send_notification('No connection with phone', devad)
         else:
-            self.send_notification('Message failed', 'To %s' % num)
+            res = self.btmessage.push_message(fp.name)
+            self.btmessage.remove_session()
+            if res:
+                self.send_notification('Message sent', 'To %s' % num)
+                tb.delete(tb.get_start_iter(),tb.get_end_iter())
+            else:
+                self.send_notification('Message failed', 'To %s' % num)
 
         # Manage history
         history_list = self.app.actions['history_list'][1]
@@ -207,69 +272,6 @@ class TextoterApplication(Gtk.Application):
         self.init_config()
         self.read_config()
         print(self.actions)
-
-#     def checked_dir_changed(self, monitor, file1, file2, evt_type):
-# #        print((file1.get_parse_name() if file1 else file1 , file2.get_parse_name() if file2 else file2, evt_type))
-#         self.win.phone_number_entry.set_text('')
-#         tb = self.win.sms_content_text_view.get_buffer()
-#         t = tb.delete(tb.get_start_iter(),tb.get_end_iter())
-#         return True
-
-#     def sent_dir_changed(self, monitor, file1, file2, evt_type):
-#         # Send success notification when message is copied here
-#         if evt_type != Gio.FileMonitorEvent.CREATED:
-#             return False
-#         try:
-#             with open(file1.get_parse_name()) as f:
-#                 line = f.readline()
-#                 fields = line.split()
-#                 if fields[0] == 'To:':
-#                     num = fields[1]
-#                     self.send_notification('Message sent', 'To +%s' % num)
-#         except Exception as e:
-#             # File not accessible or not existing anymore (e.g. start of daemon)
-#             print('Exception in Sent', e)
-#             print("-"*60)
-#             traceback.print_exc(file=sys.stdout)
-#             print("-"*60)
-#             return False
-#         return True
-
-#     def failed_dir_changed(self, monitor, file1, file2, evt_type):
-#         # Send failure notification when message is copied here
-#         if evt_type != Gio.FileMonitorEvent.CREATED:
-#             return False
-#         try:
-#             with open(file1.get_parse_name()) as f:
-#                 line = f.readline()
-#                 # Retrieve the phone number
-#                 fields = line.split()
-                
-#                 # Parse file for fail reason
-#                 while f:
-#                     line = f.readline()
-#                     if line.startswith('Fail_reason'):
-#                         break
-#                 reason = ''
-#                 if f:
-#                     # Fail reason found before end of file
-#                     fields2 = line.split()
-#                     reason = ' (Reason: ' + ' '.join(fields2[1:]) + ')'
-
-#                 # Notify the fail reason
-#                 if fields[0] == 'To:':
-#                     num = fields[1]
-#                     self.send_notification('Message failed%s' % (reason),
-#                                            'To +%s' % num)
-#         except Exception as e:
-#             # File not accessible or not existing anymore (e.g. start of daemon)
-#             print('Exception in Failed:', e)
-#             print("-"*60)
-#             traceback.print_exc(file=sys.stdout)
-#             print("-"*60)
-#             return False
-#             pass
-#         return True
     
     def init_config(self):
         # Initialize configuration stuff
