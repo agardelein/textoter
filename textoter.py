@@ -34,6 +34,8 @@ DBUS_SYS_PATH = '/org/bluez'
 devad = '88:51:7A:01:86:98'
 HCI = 'hci'
 
+header = 'BEGIN:BMSG\r\nVERSION:1.0\r\nSTATUS:READ\r\nTYPE:MMS\r\nFOLDER:null\r\nBEGIN:BENV\r\n'
+footer = 'END:BENV\r\nEND:BMSG\r\n'
 vcard2 = 'BEGIN:VCARD\r\nVERSION:2.1\r\nN:null;;;;\r\nTEL:{}\r\nEND:VCARD\r\n'
 body2 = 'BEGIN:BBODY\r\nLENGTH:{}\r\nBEGIN:MSG\r\n{}\r\nEND:MSG\r\nEND:BBODY\r\n'
 msg_header = 'BEGIN:MSG\r\n'
@@ -99,17 +101,16 @@ class BTMessage:
                     r = self.get_properties(self.sysbus, DBUS_SYS_NAME,
                                             '/'.join((path, child.attrib['name'])))
                     devs[r[0]['Address']] = r[0]['Name']
-                    
         return devs
         
-    def create_session(self):
+    def create_session(self, dev=None):
         try:
             self.path = self.bus.call_sync(self.bus_name,
                                            self.bus_path,
                                            'org.bluez.obex.Client1',
                                            'CreateSession',
                                            GLib.Variant('(sa{sv})',
-                                                        (devad,
+                                                        (dev,
                                                          {'Target': GLib.Variant('s', 'map'),
                                                           'Channel': GLib.Variant('y', 21),
                                                           }
@@ -180,9 +181,24 @@ class TextoterWindow(Gtk.ApplicationWindow):
             iter = self.store.append([num])
         cbx = self.builder.get_object('PhoneNumberComboBox')
         cbx.set_entry_text_column(0)
+
+        cbx = self.builder.get_object('dev_cbx')
+        self.dev_store = self.builder.get_object('dev_store')
+        r = Gtk.CellRendererText()
+        cbx.pack_start(r, True)
+        cbx.add_attribute(r, 'text', 1)
+        for dev, name in self.btmessage.get_devices().items():
+            self.dev_store.append([dev, name])
+        self.dev_cbx = cbx
         
     def ok_clicked(self, button):
         # Send message
+        iter = self.dev_cbx.get_active_iter()
+        if iter is not None:
+            model = self.dev_cbx.get_model()
+            row = model[iter]
+            print(row[0], row[1])
+            my_devad = row[0]
         num = self.phone_number_entry.get_text()
 
         # Process specific for France
@@ -199,14 +215,13 @@ class TextoterWindow(Gtk.ApplicationWindow):
         content = '\n'.join((' '.join(('To:', num)), '', t))
         fp = tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix='arnaud-', dir='/tmp')
         os.chmod(fp.name, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-        print('name: <{}>, content <{}>'.format(fp.name, msg))
         my_msg = msg_header + t.replace('\n', '\r\n') + msg_footer
         my_msg_l = msg_length.format(len(my_msg)) + my_msg
         m = header + vcard2.format(num) + my_msg_l + footer
         print('m <{}>'.format(m))
         fp.write(m)
         fp.close()
-        res = self.btmessage.create_session()
+        res = self.btmessage.create_session(my_devad)
         if not res:
             self.send_notification('No connection with phone', devad)
         else:
