@@ -177,7 +177,6 @@ class TextoterWindow(Gtk.ApplicationWindow):
         self.sms_content_text_view = self.builder.get_object('SMSTextView')
         self.store = self.builder.get_object('store')
         for num in self.app.actions['history_list'][1]:
-            print(num)
             iter = self.store.append([num])
         cbx = self.builder.get_object('PhoneNumberComboBox')
         cbx.set_entry_text_column(0)
@@ -187,17 +186,22 @@ class TextoterWindow(Gtk.ApplicationWindow):
         r = Gtk.CellRendererText()
         cbx.pack_start(r, True)
         cbx.add_attribute(r, 'text', 1)
+        numi = 0
         for dev, name in self.btmessage.get_devices().items():
             self.dev_store.append([dev, name])
+            if dev == self.app.actions['device'][1]:
+                cbx.set_active(numi)
+            numi = numi + 1
         self.dev_cbx = cbx
         
     def ok_clicked(self, button):
         # Send message
+
+        # Retrieve device
         iter = self.dev_cbx.get_active_iter()
         if iter is not None:
             model = self.dev_cbx.get_model()
             row = model[iter]
-            print(row[0], row[1])
             my_devad = row[0]
         num = self.phone_number_entry.get_text()
 
@@ -253,6 +257,9 @@ class TextoterWindow(Gtk.ApplicationWindow):
         self.store.foreach(func, num)
         iter = self.store.prepend([num])
 
+        # Manage device
+        self.app.actions['device'] = (self.app.actions['device'][0], my_devad)
+
     def cancel_clicked(self, button):
         # Quit
         self.app.write_config()
@@ -268,6 +275,7 @@ class TextoterApplication(Gtk.Application):
 
     SECTION = 'Textoter'
     HISTORY_LIST = 'numbers'
+    DEVICE = 'device'
     
     def __init__(self):
         Gtk.Application.__init__(self)
@@ -286,7 +294,6 @@ class TextoterApplication(Gtk.Application):
         Gtk.Application.do_startup(self)
         self.init_config()
         self.read_config()
-        print(self.actions)
     
     def init_config(self):
         # Initialize configuration stuff
@@ -298,6 +305,7 @@ class TextoterApplication(Gtk.Application):
 
         # Defaults
         self.config.set(section, TextoterApplication.HISTORY_LIST, [])
+        self.config.set(section, TextoterApplication.DEVICE, '')
 
     def sanitize_list(self, lst):
         # Remove leading and trailing white spaces when creating the list
@@ -309,17 +317,21 @@ class TextoterApplication(Gtk.Application):
 
         history_list = config.get(section, TextoterApplication.HISTORY_LIST)
         history_list = self.sanitize_list(history_list.split(';'))
+        device = config.get(section, TextoterApplication.DEVICE)
+        device = device.strip()
         actions = {
-            'history_list': (True, history_list)
+            'history_list': (True, history_list),
+            'device': (True, device)
         }
         return actions
 
     def actions_to_config(self, actions, config):
         # Send infos to configuration file
-        print(actions)
         section = TextoterApplication.SECTION
         history_list = ';'.join(actions['history_list'][1])
+        device = actions['device'][1]
         config.set(section, TextoterApplication.HISTORY_LIST, history_list)
+        config.set(section, TextoterApplication.DEVICE, device)
     
     def read_config(self):
         # Just read the configuration file

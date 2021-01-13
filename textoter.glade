@@ -74,6 +74,7 @@ General Public License for more details.
           <object class="GtkComboBox" id="dev_cbx">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="margin_right">10</property>
             <property name="model">dev_store</property>
           </object>
           <packing>
