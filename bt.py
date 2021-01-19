@@ -9,6 +9,14 @@ DBUS_SYS_NAME = 'org.bluez'
 DBUS_SYS_PATH = '/org/bluez'
 HCI = 'hci'
 
+header = 'BEGIN:BMSG\r\nVERSION:1.0\r\nSTATUS:READ\r\nTYPE:MMS\r\nFOLDER:null\r\nBEGIN:BENV\r\n'
+footer = 'END:BENV\r\nEND:BMSG\r\n'
+vcard2 = 'BEGIN:VCARD\r\nVERSION:2.1\r\nN:null;;;;\r\nTEL:{}\r\nEND:VCARD\r\n'
+body2 = 'BEGIN:BBODY\r\nLENGTH:{}\r\nBEGIN:MSG\r\n{}\r\nEND:MSG\r\nEND:BBODY\r\n'
+msg_header = 'BEGIN:MSG\r\n'
+msg_footer = '\r\nEND:MSG\r\n'
+msg_length = 'BEGIN:BBODY\r\nLENGTH:{}\r\n'
+
 class BTMessage:
     def __init__(self, bus_name=DBUS_NAME, bus_path=DBUS_PATH):
         self.bus_name = bus_name
@@ -117,3 +125,9 @@ class BTMessage:
                             None, # Cancellable
                             )
         return res[1]['Status'] == 'queued'
+
+    def prepare_message(self, num, t):
+        my_msg = msg_header + t.replace('\n', '\r\n') + msg_footer
+        my_msg_l = msg_length.format(len(my_msg)) + my_msg
+        m = header + vcard2.format(num) + my_msg_l + footer
+        return m

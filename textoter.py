@@ -16,9 +16,7 @@
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Notify', '0.7')
-from gi.repository import GLib
 from gi.repository import Gtk
-from gi.repository import Gio
 from gi.repository import Notify
 import sys, os, stat, traceback
 import tempfile
@@ -26,14 +24,6 @@ import configparser
 from xdg import BaseDirectory
 import locale
 from bt import BTMessage
-
-header = 'BEGIN:BMSG\r\nVERSION:1.0\r\nSTATUS:READ\r\nTYPE:MMS\r\nFOLDER:null\r\nBEGIN:BENV\r\n'
-footer = 'END:BENV\r\nEND:BMSG\r\n'
-vcard2 = 'BEGIN:VCARD\r\nVERSION:2.1\r\nN:null;;;;\r\nTEL:{}\r\nEND:VCARD\r\n'
-body2 = 'BEGIN:BBODY\r\nLENGTH:{}\r\nBEGIN:MSG\r\n{}\r\nEND:MSG\r\nEND:BBODY\r\n'
-msg_header = 'BEGIN:MSG\r\n'
-msg_footer = '\r\nEND:MSG\r\n'
-msg_length = 'BEGIN:BBODY\r\nLENGTH:{}\r\n'
 
 class TextoterWindow(Gtk.ApplicationWindow):
     # The main window
@@ -103,9 +93,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
         content = '\n'.join((' '.join(('To:', num)), '', t))
         fp = tempfile.NamedTemporaryFile(mode='w+t', delete=False, prefix='arnaud-', dir='/tmp')
         os.chmod(fp.name, stat.S_IRWXU | stat.S_IRWXG | stat.S_IRWXO)
-        my_msg = msg_header + t.replace('\n', '\r\n') + msg_footer
-        my_msg_l = msg_length.format(len(my_msg)) + my_msg
-        m = header + vcard2.format(num) + my_msg_l + footer
+        m = self.btmessage.prepare_message(num, t)
         print('m <{}>'.format(m))
         fp.write(m)
         fp.close()
