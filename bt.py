@@ -120,9 +120,14 @@ class BTMessage:
                     devs[r[0]['Address']] = r[0]['Name']
         return devs
         
-    def create_session(self, dev=None):
+    def create_session(self, dev=None, port=None):
         try:
-            self.get_device_port(dev)
+            if port is None:
+                print('Scanning device')
+                self.get_device_port(dev)
+            else:
+                print('Using already known port', port)
+                self.port = port
             self.path = self.bus.call_sync(self.bus_name,
                                            self.bus_path,
                                            'org.bluez.obex.Client1',

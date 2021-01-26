@@ -18,7 +18,7 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('Notify', '0.7')
 from gi.repository import Gtk
 from gi.repository import Notify
-import sys, os, stat, traceback
+import sys, os, stat
 import tempfile
 import configparser
 from xdg import BaseDirectory
@@ -97,12 +97,15 @@ class TextoterWindow(Gtk.ApplicationWindow):
         print('m <{}>'.format(m))
         fp.write(m)
         fp.close()
-        res = self.btmessage.create_session(my_devad)
+        port = self.app.actions['ports'].get(my_devad, None)
+        res = self.btmessage.create_session(my_devad, port)
         if not res:
-            self.send_notification('No connection with phone', devad)
+            self.send_notification('No connection with phone', my_devad)
         else:
-            res = self.btmessage.push_message(fp.name)
+            #res = self.btmessage.push_message(fp.name)
+            res = None
             self.btmessage.remove_session()
+            self.app.actions['ports'] = {my_devad: self.btmessage.port}
             if res:
                 self.send_notification('Message sent', 'To %s' % num)
                 tb.delete(tb.get_start_iter(),tb.get_end_iter())
@@ -193,8 +196,14 @@ class TextoterApplication(Gtk.Application):
         device = device.strip()
         actions = {
             'history_list': (True, history_list),
-            'device': (True, device)
+            'device': (True, device),
+            'ports': {},
         }
+        for s in config.sections():
+            if s in [TextoterApplication.SECTION]:
+                continue
+            actions['ports'][s] = config.getint(s, 'port')
+        print(actions)
         return actions
 
     def actions_to_config(self, actions, config):
@@ -204,6 +213,10 @@ class TextoterApplication(Gtk.Application):
         device = actions['device'][1]
         config.set(section, TextoterApplication.HISTORY_LIST, history_list)
         config.set(section, TextoterApplication.DEVICE, device)
+        for dev, port in actions['ports'].items():
+            if not config.has_section(dev):
+                config.add_section(dev)
+            config.set(dev, 'port', port)
     
     def read_config(self):
         # Just read the configuration file
