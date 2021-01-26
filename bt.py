@@ -1,6 +1,10 @@
 import gi
 from gi.repository import GLib
 from gi.repository import Gio
+from subprocess import run
+import io
+import sys
+import traceback
 import xml.etree.ElementTree as ET
 
 DBUS_NAME = 'org.bluez.obex'
@@ -24,6 +28,43 @@ class BTMessage:
         self.bus = Gio.bus_get_sync(Gio.BusType.SESSION)
         self.sysbus = Gio.bus_get_sync(Gio.BusType.SYSTEM)
         self.path = None
+        self.port = None
+
+    def parse_xml_record(self, record):
+        """ Parse XML to find relevant record including port for MAP
+        Return port, None if not found
+        """
+        root = ET.fromstring(record)
+        if root.find('./attribute[@id="0x0001"]/sequence/uuid[@value="0x1132"]') is not None:
+            port = root.find('./attribute[@id="0x0004"]/sequence/sequence/uuid[@value="0x0003"]/../uint8')
+            if port is None:
+                return None
+            else:
+                return int(port.attrib['value'], 16)
+
+    def get_device_port(self, devad):
+        """ Browse device using sdptool with xml output
+        """
+        res = run(['/usr/bin/sdptool', 'browse', '--xml', devad],
+                  capture_output=True,
+                  encoding='utf-8')
+        b_in = io.StringIO(res.stdout)
+        record = ''
+        for line in b_in:
+            if line.strip().startswith('<?xml'):
+                record = line
+            elif line.strip().startswith('</record>'):
+                # Record completed
+                record = record + line
+                # Parse data recorded so far
+                self.port = self.parse_xml_record(record)
+            else:
+            # Append line
+                if line.strip().startswith('<'):
+                    record = record + line
+                else:
+                    continue
+        return self.port
 
     def introspect(self, bus, name, path):
         res = bus.call_sync(name,
@@ -56,6 +97,7 @@ class BTMessage:
         res = self.introspect(self.sysbus, DBUS_SYS_NAME, DBUS_SYS_PATH)
         root = ET.fromstring(res[0])
         node = None
+        devs = {}
         for child in root:
             if child.tag == 'node' and\
                child.attrib['name'].startswith(HCI):
@@ -80,6 +122,7 @@ class BTMessage:
         
     def create_session(self, dev=None):
         try:
+            self.get_device_port(dev)
             self.path = self.bus.call_sync(self.bus_name,
                                            self.bus_path,
                                            'org.bluez.obex.Client1',
@@ -87,7 +130,7 @@ class BTMessage:
                                            GLib.Variant('(sa{sv})',
                                                         (dev,
                                                          {'Target': GLib.Variant('s', 'map'),
-                                                          'Channel': GLib.Variant('y', 21),
+                                                          'Channel': GLib.Variant('y', self.port),
                                                           }
                                                          )),
                                            None,  # reply_type
