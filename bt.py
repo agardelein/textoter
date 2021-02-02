@@ -6,7 +6,7 @@ import io
 import sys
 import traceback
 import xml.etree.ElementTree as ET
-
+import time
 DBUS_NAME = 'org.bluez.obex'
 DBUS_PATH = '/org/bluez/obex'
 DBUS_SYS_NAME = 'org.bluez'
@@ -30,19 +30,36 @@ class BTMessage:
         self.path = None
         self.port = None
 
-    def parse_xml_record(self, record):
+    def read_phonebook(self, devad):
+        #port = self.get_device_port(devad, service_id='0x112f')
+        port = 19  # REMOVE ME
+        self.create_session(devad, port, target='pbap')
+        self.select_pb()
+        res = self.pullall_pb()
+        fn = res[1]['Filename']
+        print(fn, type(fn))
+        vcards = ''
+        time.sleep(2)  # Or check transfer is complete
+        with open(fn, 'r') as f:
+            vcards = f.read(-1)
+            print(vcards)
+        self.remove_session()
+        return vcards
+        
+    def parse_xml_record(self, record, service_id='0x1132'):
         """ Parse XML to find relevant record including port for MAP
         Return port, None if not found
         """
         root = ET.fromstring(record)
-        if root.find('./attribute[@id="0x0001"]/sequence/uuid[@value="0x1132"]') is not None:
+        if root.find('./attribute[@id="0x0001"]/sequence/uuid[@value="{}"]'.format(service_id)) is not None:
             port = root.find('./attribute[@id="0x0004"]/sequence/sequence/uuid[@value="0x0003"]/../uint8')
+            print(port.attrib)
             if port is None:
                 return None
             else:
                 return int(port.attrib['value'], 16)
 
-    def get_device_port(self, devad):
+    def get_device_port(self, devad, service_id='0x1132'):
         """ Browse device using sdptool with xml output
         """
         res = run(['/usr/bin/sdptool', 'browse', '--xml', devad],
@@ -57,7 +74,9 @@ class BTMessage:
                 # Record completed
                 record = record + line
                 # Parse data recorded so far
-                self.port = self.parse_xml_record(record)
+                self.port = self.parse_xml_record(record, service_id)
+                if self.port is not None:
+                    break
             else:
             # Append line
                 if line.strip().startswith('<'):
@@ -120,21 +139,24 @@ class BTMessage:
                     devs[r[0]['Address']] = r[0]['Name']
         return devs
         
-    def create_session(self, dev=None, port=None):
+    def create_session(self, dev=None, port=None, target='map'):
         try:
             if port is None:
                 print('Scanning device')
                 self.get_device_port(dev)
+                print('port:', self.port)
             else:
                 print('Using already known port', port)
                 self.port = port
+            if port is None:
+                return None
             self.path = self.bus.call_sync(self.bus_name,
                                            self.bus_path,
                                            'org.bluez.obex.Client1',
                                            'CreateSession',
                                            GLib.Variant('(sa{sv})',
                                                         (dev,
-                                                         {'Target': GLib.Variant('s', 'map'),
+                                                         {'Target': GLib.Variant('s', target),
                                                           'Channel': GLib.Variant('y', self.port),
                                                           }
                                                          )),
@@ -143,7 +165,8 @@ class BTMessage:
                                            -1, # Timeout
                                            None, # Cancellable
                                            )
-        except GLib.Error:
+        except GLib.Error as e:
+            print(e.message)
             return None
         finally:
             print('path:', self.path)
@@ -173,6 +196,45 @@ class BTMessage:
                             None, # Cancellable
                             )
         return res[1]['Status'] == 'queued'
+
+    def select_pb(self, location='int', pb='pb'):
+        res = self.bus.call_sync(self.bus_name,
+                            self.path[0],
+                            'org.bluez.obex.PhonebookAccess1',
+                            'Select',
+                            GLib.Variant('(ss)', (location, pb)), # Parameters
+                            None, # reply_type
+                            Gio.DBusCallFlags.NONE, # flags
+                            2400000, # Timeout
+                            None, # Cancellable
+                            )
+        return res
+
+    def pullall_pb(self):
+        res = self.bus.call_sync(self.bus_name,
+                            self.path[0],
+                            'org.bluez.obex.PhonebookAccess1',
+                            'PullAll',
+                            GLib.Variant('(sa{sv})', ('', {},)), # Parameters
+                            None, # reply_type
+                            Gio.DBusCallFlags.NONE, # flags
+                            2400000, # Timeout
+                            None, # Cancellable
+                            )
+        return res
+
+    def list_pb(self):
+        res = self.bus.call_sync(self.bus_name,
+                            self.path[0],
+                            'org.bluez.obex.PhonebookAccess1',
+                            'List',
+                            GLib.Variant('(a{sv})', ({},)), # Parameters
+                            None, # reply_type
+                            Gio.DBusCallFlags.NONE, # flags
+                            2400000, # Timeout
+                            None, # Cancellable
+                            )
+        return res
 
     def prepare_message(self, num, t):
         my_msg = msg_header + t.replace('\n', '\r\n') + msg_footer

@@ -46,7 +46,6 @@ class TextoterWindow(Gtk.ApplicationWindow):
 
         self.add(b)
         self.set_default_size(300, 500)
-
         self.phone_number_entry = self.builder.get_object('PhoneNumberEntry')
         self.sms_content_text_view = self.builder.get_object('SMSTextView')
         self.store = self.builder.get_object('store')
@@ -67,6 +66,9 @@ class TextoterWindow(Gtk.ApplicationWindow):
                 cbx.set_active(numi)
             numi = numi + 1
         self.dev_cbx = cbx
+        iter = self.dev_store.get_iter(cbx.get_active())
+        devad = self.dev_store.get_value(iter, 0)
+        btmessage.read_phonebook(devad)
         
     def ok_clicked(self, button):
         # Send message
@@ -102,8 +104,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
         if not res:
             self.send_notification('No connection with phone', my_devad)
         else:
-            #res = self.btmessage.push_message(fp.name)
-            res = None
+            res = self.btmessage.push_message(fp.name)
             self.btmessage.remove_session()
             self.app.actions['ports'] = {my_devad: self.btmessage.port}
             if res:
