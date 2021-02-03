@@ -6,6 +6,7 @@ import io
 import sys
 import traceback
 import xml.etree.ElementTree as ET
+import vobject
 import time
 DBUS_NAME = 'org.bluez.obex'
 DBUS_PATH = '/org/bluez/obex'
@@ -31,14 +32,14 @@ class BTMessage:
         self.port = None
 
     def read_phonebook(self, devad):
-        #port = self.get_device_port(devad, service_id='0x112f')
-        port = 19  # REMOVE ME
+        port = self.get_device_port(devad, service_id='0x112f')
+        #port = 19  # REMOVE ME
         self.create_session(devad, port, target='pbap')
         self.select_pb()
         res = self.pullall_pb()
         fn = res[1]['Filename']
         transfer_path = res[0]
-        vcards = ''
+        vcards = []
         status = res[1]['Status']
         while status == 'queued':
             # poll every 0.1 s
@@ -47,8 +48,13 @@ class BTMessage:
             if res is None:
                 break
             status = res[0]
+        data = ''
         with open(fn, 'r') as f:
-            vcards = f.read(-1)
+            for line in f:
+                data = data + line
+                if 'END:VCARD' in line:
+                    vcards.append(vobject.readOne(data))
+                    data = ''
         self.remove_session()
         return vcards
         
