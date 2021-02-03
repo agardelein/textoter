@@ -37,12 +37,18 @@ class BTMessage:
         self.select_pb()
         res = self.pullall_pb()
         fn = res[1]['Filename']
-        print(fn, type(fn))
+        transfer_path = res[0]
         vcards = ''
-        time.sleep(2)  # Or check transfer is complete
+        status = res[1]['Status']
+        while status == 'queued':
+            # poll every 0.1 s
+            time.sleep(0.1)
+            res = self.get_transfer_status(transfer_path)
+            if res is None:
+                break
+            status = res[0]
         with open(fn, 'r') as f:
             vcards = f.read(-1)
-            print(vcards)
         self.remove_session()
         return vcards
         
@@ -234,6 +240,23 @@ class BTMessage:
                             2400000, # Timeout
                             None, # Cancellable
                             )
+        return res
+
+    def get_transfer_status(self, path):
+        try:
+            res = self.bus.call_sync(self.bus_name,
+                                     path,
+                                     'org.freedesktop.DBus.Properties',
+                                     'Get',
+                                     GLib.Variant('(ss)', ('org.bluez.obex.Transfer1', 'Status')), # Parameters
+                                     None, # reply_type
+                                     Gio.DBusCallFlags.NONE, # flags
+                                     2400000, # Timeout
+                                     None, # Cancellable
+                                     )
+        except GLib.Error as e:
+            print(e.message)
+            return None
         return res
 
     def prepare_message(self, num, t):
