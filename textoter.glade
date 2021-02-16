@@ -134,7 +134,6 @@ General Public License for more details.
               <object class="GtkEntry" id="PhoneNumberEntry">
                 <property name="can-focus">True</property>
                 <property name="can-default">True</property>
-                <property name="max-length">20</property>
                 <property name="placeholder-text" translatable="yes">Phone number</property>
               </object>
             </child>

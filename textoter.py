@@ -18,6 +18,7 @@ gi.require_version('Gtk', '3.0')
 gi.require_version('Notify', '0.7')
 from gi.repository import Gtk
 from gi.repository import Notify
+from gi.repository import Pango
 import sys, os, stat
 import tempfile
 import configparser
@@ -54,6 +55,13 @@ class TextoterWindow(Gtk.ApplicationWindow):
             iter = self.store.append([num])
         cbx = self.builder.get_object('PhoneNumberComboBox')
         cbx.set_entry_text_column(3)
+        cbx.clear()
+        r = Gtk.CellRendererText()
+        cbx.pack_start(r, False)
+        cbx.add_attribute(r, 'text', 0)
+        r = Gtk.CellRendererText(style=Pango.Style.ITALIC)
+        cbx.pack_start(r, False)
+        cbx.add_attribute(r, 'text', 1)
         self.pn_cbx = cbx
 
         cbx = self.builder.get_object('dev_cbx')
