@@ -46,6 +46,8 @@ class TextoterWindow(Gtk.ApplicationWindow):
         }
         self.builder.connect_signals(handlers)
 
+        self.ab_store = self.builder.get_object('ab_store')
+        
         self.add(b)
         self.set_default_size(300, 500)
         self.phone_number_entry = self.builder.get_object('PhoneNumberEntry')
@@ -64,6 +66,22 @@ class TextoterWindow(Gtk.ApplicationWindow):
         cbx.add_attribute(r, 'text', 1)
         self.pn_cbx = cbx
 
+        ec = Gtk.EntryCompletion.new()
+        self.phone_number_entry.set_completion(ec)
+        ec.set_model(self.ab_store)
+        ec.set_text_column(3)
+        ec.set_inline_selection(True)
+        ec.set_inline_completion(True)
+        ec.set_popup_completion(True)
+        # FIXE: Setting CellRenderer appears not to work
+        ec.clear()
+        r = Gtk.CellRendererText()
+        ec.pack_start(r, False)
+        ec.add_attribute(r, 'text', 0)
+        r = Gtk.CellRendererText(style=Pango.Style.ITALIC)
+        ec.pack_start(r, False)
+        ec.add_attribute(r, 'text', 1)
+
         cbx = self.builder.get_object('dev_cbx')
         self.dev_store = self.builder.get_object('dev_store')
         r = Gtk.CellRendererText()
@@ -77,8 +95,6 @@ class TextoterWindow(Gtk.ApplicationWindow):
             numi = numi + 1
         self.dev_cbx = cbx
 
-        self.ab_store = self.builder.get_object('ab_store')
-        
     def ok_clicked(self, button):
         # Send message
 
@@ -89,9 +105,29 @@ class TextoterWindow(Gtk.ApplicationWindow):
             row = model[iter]
             my_devad = row[0]
         iter = self.pn_cbx.get_active_iter()
-        model = self.pn_cbx.get_model()
-        row = model[iter]
-        num = row[1]
+        num = None
+        if iter is None:
+            # Attemp to retrieve number from entry text
+            print('Iter is None')
+            t = self.phone_number_entry.get_text()
+            for row in self.ab_store:
+                if t == row[3]:
+                    num = row[1]
+            if num is None:
+                # Check whether a bare number has been entered
+                try:
+                    float(t)
+                except ValueError:
+                    num = None
+                else:
+                    num = t
+        else:
+            model = self.pn_cbx.get_model()
+            row = model[iter]
+            num = row[1]
+        print(num)
+        if num is None:
+            return
 
         # Process specific for France
         if locale.getlocale()[0].startswith('fr') and\
@@ -159,11 +195,11 @@ class TextoterWindow(Gtk.ApplicationWindow):
         vcards = self.btmessage.read_phonebook(devad)
         for vcard in vcards:
             for tel in vcard.contents['tel']:
-                print(vcard.fn.value, tel.value, tel)
                 self.ab_store.append([vcard.fn.value,
                                       tel.value,
                                       '', # Type - FIXME TO BE FILLED
-                                      '{} ({})'.format(vcard.fn.value, tel.value)])
+                                      '{} ({})'.format(vcard.fn.value,
+                                                       tel.value)])
 
     def send_notification(self, title, text, file_path_to_icon=''):
         # Used to create and show the notification
