@@ -40,7 +40,8 @@ class TextoterWindow(Gtk.ApplicationWindow):
 
         b = self.builder.get_object('TextoterBox')
         handlers = {'OkButton_clicked_cb': self.ok_clicked,
-                    'CancelButton_clicked_cb': self.cancel_clicked
+                    'CancelButton_clicked_cb': self.cancel_clicked,
+                    'PhoneButton_clicked_cb': self.phone_ab_clicked,
         }
         self.builder.connect_signals(handlers)
 
@@ -52,7 +53,8 @@ class TextoterWindow(Gtk.ApplicationWindow):
         for num in self.app.actions['history_list'][1]:
             iter = self.store.append([num])
         cbx = self.builder.get_object('PhoneNumberComboBox')
-        cbx.set_entry_text_column(0)
+        cbx.set_entry_text_column(3)
+        self.pn_cbx = cbx
 
         cbx = self.builder.get_object('dev_cbx')
         self.dev_store = self.builder.get_object('dev_store')
@@ -66,9 +68,8 @@ class TextoterWindow(Gtk.ApplicationWindow):
                 cbx.set_active(numi)
             numi = numi + 1
         self.dev_cbx = cbx
-        iter = self.dev_store.get_iter(cbx.get_active())
-        devad = self.dev_store.get_value(iter, 0)
-        btmessage.read_phonebook(devad)
+
+        self.ab_store = self.builder.get_object('ab_store')
         
     def ok_clicked(self, button):
         # Send message
@@ -79,7 +80,10 @@ class TextoterWindow(Gtk.ApplicationWindow):
             model = self.dev_cbx.get_model()
             row = model[iter]
             my_devad = row[0]
-        num = self.phone_number_entry.get_text()
+        iter = self.pn_cbx.get_active_iter()
+        model = self.pn_cbx.get_model()
+        row = model[iter]
+        num = row[1]
 
         # Process specific for France
         if locale.getlocale()[0].startswith('fr') and\
@@ -140,6 +144,18 @@ class TextoterWindow(Gtk.ApplicationWindow):
         # Quit
         self.app.write_config()
         sys.exit()
+
+    def phone_ab_clicked(self, button):
+        iter = self.dev_store.get_iter(self.dev_cbx.get_active())
+        devad = self.dev_store.get_value(iter, 0)
+        vcards = self.btmessage.read_phonebook(devad)
+        for vcard in vcards:
+            for tel in vcard.contents['tel']:
+                print(vcard.fn.value, tel.value, tel)
+                self.ab_store.append([vcard.fn.value,
+                                      tel.value,
+                                      '', # Type - FIXME TO BE FILLED
+                                      '{} ({})'.format(vcard.fn.value, tel.value)])
 
     def send_notification(self, title, text, file_path_to_icon=''):
         # Used to create and show the notification

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- Generated with glade 3.22.2 -->
+<!-- Generated with glade 3.38.2 -->
 <!--
 Textoter: A stupid application to send sms with smsd (smstools)
 Copyright (C) 2018 Arnaud Gardelein <arnaud@oscopy.org>
@@ -16,6 +16,18 @@ General Public License for more details.
 -->
 <interface>
   <requires lib="gtk+" version="3.20"/>
+  <object class="GtkListStore" id="ab_store">
+    <columns>
+      <!-- column-name name -->
+      <column type="gchararray"/>
+      <!-- column-name number -->
+      <column type="gchararray"/>
+      <!-- column-name type -->
+      <column type="gchararray"/>
+      <!-- column-name text -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
   <object class="GtkListStore" id="dev_store">
     <columns>
       <!-- column-name dev -->
@@ -24,20 +36,19 @@ General Public License for more details.
       <column type="gchararray"/>
     </columns>
   </object>
-  <object class="GtkListStore" id="store">
-    <columns>
-      <!-- column-name String -->
-      <column type="gchararray"/>
-    </columns>
+  <object class="GtkImage" id="image1">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="icon-name">phone</property>
   </object>
   <object class="GtkBox" id="TextoterBox">
     <property name="visible">True</property>
-    <property name="can_focus">False</property>
+    <property name="can-focus">False</property>
     <property name="orientation">vertical</property>
     <child>
       <object class="GtkLabel">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <property name="label" translatable="yes">Send SMS</property>
         <attributes>
           <attribute name="weight" value="bold"/>
@@ -52,14 +63,14 @@ General Public License for more details.
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <child>
           <object class="GtkLabel">
             <property name="visible">True</property>
-            <property name="can_focus">False</property>
+            <property name="can-focus">False</property>
             <property name="label" translatable="yes">Device</property>
-            <property name="width_chars">6</property>
-            <property name="max_width_chars">6</property>
+            <property name="width-chars">6</property>
+            <property name="max-width-chars">6</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>
@@ -73,8 +84,8 @@ General Public License for more details.
         <child>
           <object class="GtkComboBox" id="dev_cbx">
             <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="margin_right">10</property>
+            <property name="can-focus">False</property>
+            <property name="margin-right">10</property>
             <property name="model">dev_store</property>
           </object>
           <packing>
@@ -93,14 +104,14 @@ General Public License for more details.
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
+        <property name="can-focus">False</property>
         <child>
           <object class="GtkLabel">
             <property name="visible">True</property>
-            <property name="can_focus">False</property>
+            <property name="can-focus">False</property>
             <property name="label" translatable="yes">To : </property>
-            <property name="width_chars">6</property>
-            <property name="max_width_chars">6</property>
+            <property name="width-chars">6</property>
+            <property name="max-width-chars">6</property>
             <attributes>
               <attribute name="weight" value="bold"/>
             </attributes>
@@ -114,18 +125,17 @@ General Public License for more details.
         <child>
           <object class="GtkComboBox" id="PhoneNumberComboBox">
             <property name="visible">True</property>
-            <property name="can_focus">False</property>
-            <property name="margin_right">10</property>
-            <property name="model">store</property>
-            <property name="has_entry">True</property>
-            <property name="id_column">0</property>
-            <property name="active_id">0</property>
+            <property name="can-focus">False</property>
+            <property name="model">ab_store</property>
+            <property name="has-entry">True</property>
+            <property name="id-column">0</property>
+            <property name="active-id">3</property>
             <child internal-child="entry">
               <object class="GtkEntry" id="PhoneNumberEntry">
-                <property name="can_focus">True</property>
-                <property name="can_default">True</property>
-                <property name="max_length">20</property>
-                <property name="placeholder_text" translatable="yes">Phone number</property>
+                <property name="can-focus">True</property>
+                <property name="can-default">True</property>
+                <property name="max-length">20</property>
+                <property name="placeholder-text" translatable="yes">Phone number</property>
               </object>
             </child>
           </object>
@@ -133,6 +143,22 @@ General Public License for more details.
             <property name="expand">True</property>
             <property name="fill">True</property>
             <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="retrieve_ab_btn">
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <property name="margin-right">10</property>
+            <property name="image">image1</property>
+            <property name="always-show-image">True</property>
+            <signal name="clicked" handler="PhoneButton_clicked_cb" swapped="no"/>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">2</property>
           </packing>
         </child>
       </object>
@@ -145,9 +171,9 @@ General Public License for more details.
     <child>
       <object class="GtkLabel">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="margin_top">5</property>
-        <property name="margin_bottom">5</property>
+        <property name="can-focus">False</property>
+        <property name="margin-top">5</property>
+        <property name="margin-bottom">5</property>
         <property name="label" translatable="yes">Message</property>
         <attributes>
           <attribute name="weight" value="bold"/>
@@ -162,13 +188,13 @@ General Public License for more details.
     <child>
       <object class="GtkTextView" id="SMSTextView">
         <property name="visible">True</property>
-        <property name="can_focus">True</property>
-        <property name="has_focus">True</property>
-        <property name="can_default">True</property>
-        <property name="has_default">True</property>
-        <property name="margin_left">10</property>
-        <property name="margin_right">10</property>
-        <property name="wrap_mode">word</property>
+        <property name="can-focus">True</property>
+        <property name="has-focus">True</property>
+        <property name="can-default">True</property>
+        <property name="has-default">True</property>
+        <property name="margin-left">10</property>
+        <property name="margin-right">10</property>
+        <property name="wrap-mode">word</property>
       </object>
       <packing>
         <property name="expand">True</property>
@@ -180,15 +206,15 @@ General Public License for more details.
     <child>
       <object class="GtkBox">
         <property name="visible">True</property>
-        <property name="can_focus">False</property>
-        <property name="margin_top">4</property>
-        <property name="margin_bottom">4</property>
+        <property name="can-focus">False</property>
+        <property name="margin-top">4</property>
+        <property name="margin-bottom">4</property>
         <child>
           <object class="GtkButton" id="OkButton">
             <property name="label" translatable="yes">Send SMS</property>
             <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="receives_default">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
             <property name="halign">end</property>
             <signal name="clicked" handler="OkButton_clicked_cb" swapped="no"/>
           </object>
@@ -196,7 +222,7 @@ General Public License for more details.
             <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="padding">10</property>
-            <property name="pack_type">end</property>
+            <property name="pack-type">end</property>
             <property name="position">0</property>
           </packing>
         </child>
@@ -204,21 +230,21 @@ General Public License for more details.
           <object class="GtkButton" id="CancelButton">
             <property name="label">gtk-cancel</property>
             <property name="visible">True</property>
-            <property name="can_focus">True</property>
-            <property name="can_default">True</property>
-            <property name="has_default">True</property>
-            <property name="receives_default">True</property>
+            <property name="can-focus">True</property>
+            <property name="can-default">True</property>
+            <property name="has-default">True</property>
+            <property name="receives-default">True</property>
             <property name="halign">end</property>
-            <property name="margin_left">10</property>
-            <property name="margin_right">10</property>
-            <property name="use_stock">True</property>
-            <property name="always_show_image">True</property>
+            <property name="margin-left">10</property>
+            <property name="margin-right">10</property>
+            <property name="use-stock">True</property>
+            <property name="always-show-image">True</property>
             <signal name="clicked" handler="CancelButton_clicked_cb" swapped="no"/>
           </object>
           <packing>
             <property name="expand">False</property>
             <property name="fill">True</property>
-            <property name="pack_type">end</property>
+            <property name="pack-type">end</property>
             <property name="position">1</property>
           </packing>
         </child>
@@ -229,5 +255,11 @@ General Public License for more details.
         <property name="position">5</property>
       </packing>
     </child>
+  </object>
+  <object class="GtkListStore" id="store">
+    <columns>
+      <!-- column-name String -->
+      <column type="gchararray"/>
+    </columns>
   </object>
 </interface>
