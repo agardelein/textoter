@@ -57,7 +57,7 @@ class BTPhone:
         self.remove_session()
         return vcards
         
-    def parse_xml_record(self, record, service_id='0x1132'):
+    def find_service(self, record, service_id='0x1132'):
         """ Parse XML to find relevant record including port for MAP
         Return port, None if not found
         """
@@ -85,7 +85,7 @@ class BTPhone:
                 # Record completed
                 record = record + line
                 # Parse data recorded so far
-                self.port = self.parse_xml_record(record, service_id)
+                self.port = self.find_service(record, service_id)
                 if self.port is not None:
                     break
             else:
@@ -114,30 +114,16 @@ class BTPhone:
     
     def get_devices(self):
         # Look for adapter
-        res = self.introspect(self.sysbus, DBUS_SYS_NAME, DBUS_SYS_PATH)
-        root = ET.fromstring(res[0])
-        node = None
+        res = self.bus_call_sync('org.freedesktop.DBus.ObjectManager',
+                                 'GetManagedObjects',
+                                 bus=self.sysbus,
+                                 name=DBUS_SYS_NAME,
+                                 path='/')
         devs = {}
-        for child in root:
-            if child.tag == 'node' and\
-               child.attrib['name'].startswith(HCI):
-                # Take the first one
-                # FIXME: Maybe there can be other adapters
-                node = child.attrib['name']
-                break
-        if node is not None:
-            path = '/'.join((DBUS_SYS_PATH, node))
-            res = self.introspect(self.sysbus, DBUS_SYS_NAME, path)
-            rh = ET.fromstring(res[0])
-            devs = {}
-            for child in rh:
-                # Parse the adapter for devices
-                if child.tag == 'node' and\
-                   child.attrib['name'].startswith('dev'):
-                    # Retrieve properties of device
-                    r = self.get_properties(self.sysbus, DBUS_SYS_NAME,
-                                            '/'.join((path, child.attrib['name'])))
-                    devs[r[0]['Address']] = r[0]['Name']
+        for path, dev in res[0].items():
+            mydev = dev.get('org.bluez.Device1', None)
+            if mydev is not None:
+                devs[mydev.get('Address', None)] = mydev.get('Name', None)
         return devs
         
     def create_session(self, dev=None, port=None, target='map'):
