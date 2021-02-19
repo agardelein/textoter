@@ -98,29 +98,19 @@ class BTMessage:
         return self.port
 
     def introspect(self, bus, name, path):
-        res = bus.call_sync(name,
-                            path,
-                            'org.freedesktop.DBus.Introspectable',
-                            'Introspect',
-                            None, # Parameters
-                            GLib.VariantType('(s)'), # reply_type
-                            Gio.DBusCallFlags.NONE,  # flags
-                            -1,  # Timeout_msecs
-                            None, # Cancellable
-                            )
+        res = self.bus_call_sync('org.freedesktop.DBus.Introspectable',
+                                 'Introspect',
+                                 name=name, path=path, bus=bus,
+                                 reply=GLib.VariantType('(s)'))
         return res
 
     def get_properties(self, bus, name, path):
-        res = bus.call_sync(name,
-                            path,
-                            'org.freedesktop.DBus.Properties',
-                            'GetAll',
-                            GLib.Variant('(s)', ('org.bluez.Device1',)), # Parameters
-                            GLib.VariantType('(a{sv})'), # reply_type
-                            Gio.DBusCallFlags.NONE,  # flags
-                            -1,  # Timeout_msecs
-                            None, # Cancellable
-                            )
+        args = GLib.Variant('(s)', ('org.bluez.Device1',)) # Parameters
+        reply = GLib.VariantType('(a{sv})') # reply_type
+        res = self.bus_call_sync('org.freedesktop.DBus.Properties',
+                                 'GetAll', 
+                                 name=name, path=path, bus=bus,
+                                 args=args, reply=reply)
         return res
     
     def get_devices(self):
@@ -152,118 +142,102 @@ class BTMessage:
         return devs
         
     def create_session(self, dev=None, port=None, target='map'):
-        try:
-            if port is None:
-                print('Scanning device')
-                self.get_device_port(dev)
-                print('port:', self.port)
-            else:
-                print('Using already known port', port)
-                self.port = port
-            if port is None:
-                return None
-            self.path = self.bus.call_sync(self.bus_name,
-                                           self.bus_path,
-                                           'org.bluez.obex.Client1',
-                                           'CreateSession',
-                                           GLib.Variant('(sa{sv})',
-                                                        (dev,
-                                                         {'Target': GLib.Variant('s', target),
-                                                          'Channel': GLib.Variant('y', self.port),
-                                                          }
-                                                         )),
-                                           None,  # reply_type
-                                           Gio.DBusCallFlags.NONE, # flags
-                                           -1, # Timeout
-                                           None, # Cancellable
-                                           )
-        except GLib.Error as e:
-            print(e.message)
+        if port is None:
+            print('Scanning device')
+            self.get_device_port(dev)
+            print('port:', self.port)
+        else:
+            print('Using already known port', port)
+            self.port = port
+        if port is None:
             return None
-        finally:
-            print('path:', self.path)
-            return self.path
+        args = GLib.Variant('(sa{sv})', (dev,
+                                         {'Target': GLib.Variant('s', target),
+                                          'Channel': GLib.Variant('y', self.port),}))
+        self.path = self.bus_call_sync('org.bluez.obex.Client1',
+                                       'CreateSession',
+                                       path=self.bus_path,
+                                       args=args)
+        
+        print('path:', self.path)
+        return self.path
 
     def remove_session(self):
-        res = self.bus.call_sync(self.bus_name,
-                            self.bus_path,
-                            'org.bluez.obex.Client1',
-                            'RemoveSession',
-                            self.path,
-                            None,  # reply_type
-                            Gio.DBusCallFlags.NONE, # flags
-                            -1, # Timeout
-                            None, # Cancellable
-                            )
+        res = self.bus_call_sync('org.bluez.obex.Client1',
+                                 'RemoveSession',
+                                 args=self.path, name=self.bus_name,
+                                 path=self.bus_path)
+        return
 
     def push_message(self, filename):
-        res = self.bus.call_sync(self.bus_name,
-                            self.path[0],
-                            'org.bluez.obex.MessageAccess1',
-                            'PushMessage',
-                            GLib.Variant('(ssa{sv})', (filename, '/telecom/msg/outbox', {},)), # Parameters
-                            None, # reply_type
-                            Gio.DBusCallFlags.NONE, # flags
-                            2400000, # Timeout
-                            None, # Cancellable
-                            )
+        args = GLib.Variant('(ssa{sv})', (filename, '/telecom/msg/outbox', {},))
+        res = self.bus_call_sync('org.bluez.obex.MessageAccess1',
+                                 'PushMessage',
+                                 args=args)
         return res[1]['Status'] == 'queued'
 
     def select_pb(self, location='int', pb='pb'):
-        res = self.bus.call_sync(self.bus_name,
-                            self.path[0],
-                            'org.bluez.obex.PhonebookAccess1',
-                            'Select',
-                            GLib.Variant('(ss)', (location, pb)), # Parameters
-                            None, # reply_type
-                            Gio.DBusCallFlags.NONE, # flags
-                            2400000, # Timeout
-                            None, # Cancellable
-                            )
+        args = GLib.Variant('(ss)', (location, pb))
+        res = self.bus_call_sync('org.bluez.obex.PhonebookAccess1',
+                                 'Select',
+                                 args=args)
         return res
 
     def pullall_pb(self):
-        res = self.bus.call_sync(self.bus_name,
-                            self.path[0],
-                            'org.bluez.obex.PhonebookAccess1',
-                            'PullAll',
-                            GLib.Variant('(sa{sv})', ('', {},)), # Parameters
-                            None, # reply_type
-                            Gio.DBusCallFlags.NONE, # flags
-                            2400000, # Timeout
-                            None, # Cancellable
-                            )
+        args = GLib.Variant('(sa{sv})', ('', {},))
+        res = self.bus_call_sync('org.bluez.obex.PhonebookAccess1',
+                                 'PullAll',
+                                 args=args)
         return res
 
     def list_pb(self):
-        res = self.bus.call_sync(self.bus_name,
-                            self.path[0],
-                            'org.bluez.obex.PhonebookAccess1',
-                            'List',
-                            GLib.Variant('(a{sv})', ({},)), # Parameters
-                            None, # reply_type
-                            Gio.DBusCallFlags.NONE, # flags
-                            2400000, # Timeout
-                            None, # Cancellable
-                            )
+        args = GLib.Variant('(a{sv})', ({},))
+        self.bus_call_sync('org.bluez.obex.PhonebookAccess1',
+                           'List',
+                           args=args
+            )
         return res
 
     def get_transfer_status(self, path):
+        args = GLib.Variant('(ss)', ('org.bluez.obex.Transfer1', 'Status'))
+        res = self.bus_call_sync('org.freedesktop.DBus.Properties',
+                                 'Get',
+                                 args=args, path=path)
+        return res
+
+    def bus_call_sync(self, iface, method, args=None, timeout=240000,
+                      flags=Gio.DBusCallFlags.NONE,
+                      name=None,
+                      path=None,
+                      reply=None,
+                      bus=None,
+                       ):
+        print('bus_call_sync', iface, method)
+        if name is None:
+            name = self.bus_name
+        if path is None:
+            path = self.path[0]
+        if bus is None:
+            bus = self.bus
         try:
-            res = self.bus.call_sync(self.bus_name,
+            res = bus.call_sync(name,
                                      path,
-                                     'org.freedesktop.DBus.Properties',
-                                     'Get',
-                                     GLib.Variant('(ss)', ('org.bluez.obex.Transfer1', 'Status')), # Parameters
-                                     None, # reply_type
-                                     Gio.DBusCallFlags.NONE, # flags
-                                     2400000, # Timeout
+                                     iface,
+                                     method,
+                                     args,
+                                     reply, # Reply type
+                                     flags,
+                                     timeout,
                                      None, # Cancellable
                                      )
         except GLib.Error as e:
             print(e.message)
-            return None
-        return res
+            res = None
+        except TypeError as e:
+            print(e.message)
+            res = None
+        finally:
+            return res
 
     def prepare_message(self, num, t):
         my_msg = msg_header + t.replace('\n', '\r\n') + msg_footer
