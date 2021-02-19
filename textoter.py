@@ -24,7 +24,7 @@ import tempfile
 import configparser
 from xdg import BaseDirectory
 import locale
-from bt import BTMessage
+from bt import BTPhone
 
 class TextoterWindow(Gtk.ApplicationWindow):
     # The main window
@@ -73,7 +73,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
         ec.set_inline_selection(True)
         ec.set_inline_completion(True)
         ec.set_popup_completion(True)
-        # FIXE: Setting CellRenderer appears not to work
+        # FIXME: Setting CellRenderer appears not to work
         ec.clear()
         r = Gtk.CellRendererText()
         ec.pack_start(r, False)
@@ -217,7 +217,7 @@ class TextoterApplication(Gtk.Application):
         Gtk.Application.__init__(self)
         Notify.init('Textoter')
         self.win = None
-        self.bt = BTMessage()
+        self.bt = BTPhone()
 
     def do_activate(self):
         # Setup the main window

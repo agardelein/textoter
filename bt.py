@@ -3,7 +3,6 @@ from gi.repository import GLib
 from gi.repository import Gio
 from subprocess import run
 import io
-import sys
 import traceback
 import xml.etree.ElementTree as ET
 import vobject
@@ -22,7 +21,7 @@ msg_header = 'BEGIN:MSG\r\n'
 msg_footer = '\r\nEND:MSG\r\n'
 msg_length = 'BEGIN:BBODY\r\nLENGTH:{}\r\n'
 
-class BTMessage:
+class BTPhone:
     def __init__(self, bus_name=DBUS_NAME, bus_path=DBUS_PATH):
         self.bus_name = bus_name
         self.bus_path = bus_path
@@ -219,6 +218,7 @@ class BTMessage:
             path = self.path[0]
         if bus is None:
             bus = self.bus
+
         try:
             res = bus.call_sync(name,
                                      path,
