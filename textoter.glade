@@ -41,6 +41,11 @@ General Public License for more details.
     <property name="can-focus">False</property>
     <property name="icon-name">phone</property>
   </object>
+  <object class="GtkImage" id="image2">
+    <property name="visible">True</property>
+    <property name="can-focus">False</property>
+    <property name="stock">gtk-ok</property>
+  </object>
   <object class="GtkBox" id="TextoterBox">
     <property name="visible">True</property>
     <property name="can-focus">False</property>
@@ -85,6 +90,7 @@ General Public License for more details.
           <object class="GtkComboBox" id="dev_cbx">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
+            <property name="tooltip-text" translatable="yes">Select device</property>
             <property name="margin-right">10</property>
             <property name="model">dev_store</property>
           </object>
@@ -126,6 +132,7 @@ General Public License for more details.
           <object class="GtkComboBox" id="PhoneNumberComboBox">
             <property name="visible">True</property>
             <property name="can-focus">False</property>
+            <property name="tooltip-text" translatable="yes">Enter phone number in international format e.g. +33 ... or contact name</property>
             <property name="model">ab_store</property>
             <property name="has-entry">True</property>
             <property name="id-column">0</property>
@@ -149,6 +156,7 @@ General Public License for more details.
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
+            <property name="tooltip-text" translatable="yes">Retrieve address book from phone</property>
             <property name="margin-right">10</property>
             <property name="image">image1</property>
             <property name="always-show-image">True</property>
@@ -214,7 +222,10 @@ General Public License for more details.
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
+            <property name="tooltip-text" translatable="yes">Send the message</property>
             <property name="halign">end</property>
+            <property name="image">image2</property>
+            <property name="always-show-image">True</property>
             <signal name="clicked" handler="OkButton_clicked_cb" swapped="no"/>
           </object>
           <packing>
@@ -227,12 +238,13 @@ General Public License for more details.
         </child>
         <child>
           <object class="GtkButton" id="CancelButton">
-            <property name="label">gtk-cancel</property>
+            <property name="label">gtk-quit</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="can-default">True</property>
             <property name="has-default">True</property>
             <property name="receives-default">True</property>
+            <property name="tooltip-text" translatable="yes">Quit</property>
             <property name="halign">end</property>
             <property name="margin-left">10</property>
             <property name="margin-right">10</property>
