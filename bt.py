@@ -275,7 +275,7 @@ class BTPhone:
         else:
             print('Using already known port', port)
             self.port = port
-        if port is None:
+        if self.port is None:
             return None
         args = GLib.Variant('(sa{sv})', (dev,
                                          {'Target': GLib.Variant('s', target),
