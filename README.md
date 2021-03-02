@@ -1,6 +1,6 @@
 textoter
 ========
-A stupid application to send sms using bluetooth
+A stupid application to send SMS using Bluetooth Phone
 
 ![Screenshot](screenshot.png "Screenshot")
 
