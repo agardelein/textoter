@@ -2,7 +2,7 @@ textoter
 ========
 A stupid application to send sms using bluetooth
 
-.. image:: https://github.com/agardelein/textoter/blob/master/screenshot.png
+![Screenshot](screenshot.png "Screenshot")
 
 Install
 =======
