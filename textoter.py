@@ -1,6 +1,6 @@
 #!/usr/bin/python3
-# Textoter: A stupid application to send sms with smsd (smstools)
-# Copyright (C) 2018 Arnaud Gardelein <arnaud@oscopy.org>
+# Textoter: A stupid application to send sms using Bluetooth Phone
+# Copyright (C) 2018 - 2021 Arnaud Gardelein <arnaud@oscopy.org>
 
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
