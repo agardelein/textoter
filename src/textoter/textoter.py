@@ -24,7 +24,7 @@ import tempfile
 import configparser
 from xdg import BaseDirectory
 import locale
-from bt import BTPhone
+from btphonelib import BTPhone
 
 class TextoterWindow(Gtk.ApplicationWindow):
     # The main window
@@ -291,7 +291,11 @@ class TextoterApplication(Gtk.Application):
             self.config.write(f)
 
 # Go !
-app = TextoterApplication()
-exit_status = app.run(sys.argv)
-sys.exit(exit_status)
+def main():
+    app = TextoterApplication()
+    exit_status = app.run(sys.argv)
+    sys.exit(exit_status)
+
+if __name__ == '__main__':
+    main()
 

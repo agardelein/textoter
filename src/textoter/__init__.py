@@ -1,0 +1,1 @@
+from .textoter import main
