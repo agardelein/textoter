@@ -1,1 +1,1 @@
-from . bt import BTPhone
+from .btphone import BTPhone
