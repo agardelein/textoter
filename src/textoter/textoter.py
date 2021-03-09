@@ -25,6 +25,9 @@ import configparser
 from xdg import BaseDirectory
 import locale
 from btphonelib import BTPhone
+import pkg_resources
+
+UIFILE = 'textoter.glade'
 
 class TextoterWindow(Gtk.ApplicationWindow):
     # The main window
@@ -33,8 +36,19 @@ class TextoterWindow(Gtk.ApplicationWindow):
         self.builder = Gtk.Builder()
         self.app = app
         self.btmessage = btmessage
+        f = pkg_resources.resource_filename(__name__, __name__)
+        print(f)
         try:
-            self.builder = Gtk.Builder.new_from_file("textoter.glade")
+            path = os.path.split(f)[0].split('/')
+            pos = path.index('lib')
+            uifile = '/'.join((*path[0:pos], 'share', 'textoter', UIFILE))
+        except ValueError:
+            uifile = UIFILE
+        if not os.path.exists(uifile):
+            uifile = pkg_resources.resource_filename(__name__, '../../data/textoter.glade')
+        print('uifile')
+        try:
+            self.builder = Gtk.Builder.new_from_file(uifile)
         except:
             print("File not found")
             sys.exit()
