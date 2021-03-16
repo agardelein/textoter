@@ -60,19 +60,19 @@ class BTPhone:
         self.port = None
         self.iface_added_cb = None
         self.iface_removed_cb = None
-        self.signal_subscribe(DBUS_SYS_NAME,
-                              'org.freedesktop.DBus.ObjectManager',
+        self.signal_subscribe('org.freedesktop.DBus.ObjectManager',
                               'InterfacesAdded',
                               self.interfaces_added,
                               None,
                               bus=self.sysbus,
+                              name=DBUS_SYS_NAME,
                               path='/')
-        self.signal_subscribe(DBUS_SYS_NAME,
-                              'org.freedesktop.DBus.ObjectManager',
+        self.signal_subscribe('org.freedesktop.DBus.ObjectManager',
                               'InterfacesRemoved',
                               self.interfaces_removed,
                               None,
                               bus=self.sysbus,
+                              name=DBUS_SYS_NAME,
                               path='/')
 
     def read_phonebook(self, devad):
@@ -468,12 +468,53 @@ class BTPhone:
         return m
 
     def set_iface_added_callback(self, callback):
+        """ Set the callback to use when an interface is added
+
+        Parameter
+        ---------
+        callback: callable(str, str)
+        The callback to use, two arguments are provided,
+        the device address and the device name
+        """
         self.iface_added_cb = callback
 
     def set_iface_removed_callback(self, callback):
+        """ Set the callback to use when an interface is removed
+
+        Parameter
+        ---------
+        callback: callable(str)
+        The callback to use, two arguments are provided,
+        the device address
+        """
         self.iface_removed_cb = callback
 
-    def interfaces_added(self, bus, name, path, iface, signal_name, args, nouse):
+    def interfaces_added(self, bus, name, path, iface, signal_name, args, user_args):
+        """ When a device is added, update self.paths2dev, call the callback
+
+        Parameters
+        ----------
+        bus: Gio.DBusConnection or None (default None)
+        The bus to use, self.bus if None
+
+        name: str or None (default None)
+        The name of the bus to use, self.bus_name if None
+
+        path: str or None (default None)
+        The path to use, self.path[0] if None
+
+        iface: str
+        The DBus interface to use
+
+        signal_name: str
+        The DBus signal to subscribe on iface
+
+        args: GLib.Variant
+        The arguments passed from the signal
+
+        user_args: 
+        Not used
+        """
         opath, dev = args
         print('iface added')
         mydev = dev.get('org.bluez.Device1', None)
@@ -484,6 +525,31 @@ class BTPhone:
             print(self.paths2dev)
 
     def interfaces_removed(self, bus, name, path, iface, signal_name, args, nouse):
+        """ When a device is removed, update self.paths2dev, call the callback
+
+        Parameters
+        ----------
+        bus: Gio.DBusConnection or None (default None)
+        The bus to use, self.bus if None
+
+        name: str or None (default None)
+        The name of the bus to use, self.bus_name if None
+
+        path: str or None (default None)
+        The path to use, self.path[0] if None
+
+        iface: str
+        The DBus interface to use
+
+        signal_name: str
+        The DBus signal to subscribe on iface
+
+        args: GLib.Variant
+        The arguments passed from the signal
+
+        user_args: 
+        Not used
+        """
         opath, ifaces = args[0], args[1]
         if 'org.bluez.Device1' in ifaces:
             self.iface_removed_cb(self.paths2dev.get(str(opath), None))
@@ -491,18 +557,48 @@ class BTPhone:
             print(self.paths2dev)
         print('Interface removed - BT')
     
-    def signal_subscribe(self, sender, iface, signal_name, callback, args,
+    def signal_subscribe(self, iface, signal_name, callback, args,
                        name=None,
                        path=None,
                        bus=None,
                       ):
+        """ Call signal_subscribe on bus
+
+        Parameters
+        ----------
+        iface: str
+        The DBus interface to use
+
+        signal_name: str
+        The DBus signal to subscribe on iface
+
+        callback: callable
+        The callback to use
+
+        args: GLib.Variant or None (default None)
+        The arguments to pass to called method
+
+        name: str or None (default None)
+        The name of the bus to use, self.bus_name if None
+
+        path: str or None (default None)
+        The path to use, self.path[0] if None
+
+        bus: Gio.DBusConnection or None (default None)
+        The bus to use, self.bus if None
+
+        Returns
+        -------
+        int
+        The subscription id
+        """
         if name is None:
             name = self.bus_name
         if path is None:
             path = self.path[0]
         if bus is None:
             bus = self.bus
-        return bus.signal_subscribe(sender,  # sender
+        return bus.signal_subscribe(name,  # sender
                                     iface,   # interface name
                                     signal_name,
                                     path,  # object path

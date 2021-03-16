@@ -222,11 +222,15 @@ class TextoterWindow(Gtk.ApplicationWindow):
         n.show()
 
     def interface_added(self, dev, name):
+        """ Update the device list with new device
+        """
         iter = self.dev_store.append([dev, name])
         if dev == self.app.actions['device'][1]:
             self.dev_cbx.set_active_iter(iter)
 
     def interface_removed(self, dev):
+        """ Remove device from the device list
+        """
         print('dev:', dev)
         store = self.dev_store
         iter = store.get_iter_first()
