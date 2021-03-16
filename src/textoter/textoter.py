@@ -36,8 +36,9 @@ class TextoterWindow(Gtk.ApplicationWindow):
         self.builder = Gtk.Builder()
         self.app = app
         self.btmessage = btmessage
+        btmessage.set_iface_added_callback(self.interface_added)
+        btmessage.set_iface_removed_callback(self.interface_removed)
         f = pkg_resources.resource_filename(__name__, __name__)
-        print(f)
         try:
             path = os.path.split(f)[0].split('/')
             pos = path.index('lib')
@@ -46,7 +47,6 @@ class TextoterWindow(Gtk.ApplicationWindow):
             uifile = UIFILE
         if not os.path.exists(uifile):
             uifile = pkg_resources.resource_filename(__name__, '../../data/textoter.glade')
-        print('uifile')
         try:
             self.builder = Gtk.Builder.new_from_file(uifile)
         except:
@@ -220,6 +220,21 @@ class TextoterWindow(Gtk.ApplicationWindow):
         n = Notify.Notification.new(title, text, file_path_to_icon)
         n.set_timeout(5000)
         n.show()
+
+    def interface_added(self, dev, name):
+        iter = self.dev_store.append([dev, name])
+        if dev == self.app.actions['device'][1]:
+            self.dev_cbx.set_active_iter(iter)
+
+    def interface_removed(self, dev):
+        print('dev:', dev)
+        store = self.dev_store
+        iter = store.get_iter_first()
+        while iter is not None:
+            if store[iter][0] == dev:
+                store.remove(iter)
+                break
+        print('Interface removed - UI', dev)
 
 class TextoterApplication(Gtk.Application):
 

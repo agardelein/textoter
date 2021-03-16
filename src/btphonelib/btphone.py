@@ -55,8 +55,25 @@ class BTPhone:
         self.bus_path = bus_path
         self.bus = Gio.bus_get_sync(Gio.BusType.SESSION)
         self.sysbus = Gio.bus_get_sync(Gio.BusType.SYSTEM)
+        self.paths2dev = {}
         self.path = None
         self.port = None
+        self.iface_added_cb = None
+        self.iface_removed_cb = None
+        self.signal_subscribe(DBUS_SYS_NAME,
+                              'org.freedesktop.DBus.ObjectManager',
+                              'InterfacesAdded',
+                              self.interfaces_added,
+                              None,
+                              bus=self.sysbus,
+                              path='/')
+        self.signal_subscribe(DBUS_SYS_NAME,
+                              'org.freedesktop.DBus.ObjectManager',
+                              'InterfacesRemoved',
+                              self.interfaces_removed,
+                              None,
+                              bus=self.sysbus,
+                              path='/')
 
     def read_phonebook(self, devad):
         """ Read the PhoneBook of devad
@@ -449,3 +466,48 @@ class BTPhone:
         my_msg_l = msg_length.format(len(my_msg)) + my_msg
         m = header + vcard2.format(num) + my_msg_l + footer
         return m
+
+    def set_iface_added_callback(self, callback):
+        self.iface_added_cb = callback
+
+    def set_iface_removed_callback(self, callback):
+        self.iface_removed_cb = callback
+
+    def interfaces_added(self, bus, name, path, iface, signal_name, args, nouse):
+        opath, dev = args
+        print('iface added')
+        mydev = dev.get('org.bluez.Device1', None)
+        if mydev is not None:
+            self.iface_added_cb(mydev.get('Address', None),
+                                mydev.get('Name', None))
+            self.paths2dev[str(opath)] = mydev.get('Address', None)
+            print(self.paths2dev)
+
+    def interfaces_removed(self, bus, name, path, iface, signal_name, args, nouse):
+        opath, ifaces = args[0], args[1]
+        if 'org.bluez.Device1' in ifaces:
+            self.iface_removed_cb(self.paths2dev.get(str(opath), None))
+            del self.paths2dev[str(opath)]
+            print(self.paths2dev)
+        print('Interface removed - BT')
+    
+    def signal_subscribe(self, sender, iface, signal_name, callback, args,
+                       name=None,
+                       path=None,
+                       bus=None,
+                      ):
+        if name is None:
+            name = self.bus_name
+        if path is None:
+            path = self.path[0]
+        if bus is None:
+            bus = self.bus
+        return bus.signal_subscribe(sender,  # sender
+                                    iface,   # interface name
+                                    signal_name,
+                                    path,  # object path
+                                    None,  # arg0
+                                    Gio.DBusSignalFlags.NONE, # flags
+                                    callback,  # callback
+                                    None,  # user data
+                                    )

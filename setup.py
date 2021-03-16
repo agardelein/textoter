@@ -13,7 +13,7 @@ setuptools.setup(
     version='0.5',
     author='Arnaud Gardelein',
     author_email='arnaud@oscopy.org',
-    description='Textoter is a simple application that sends SMS using a phone connected via Bluetooth',
+    description='Send SMS from your mobile phone. Phone is connected via Bluetooth',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/agardelein/textoter',
