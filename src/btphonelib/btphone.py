@@ -516,13 +516,11 @@ class BTPhone:
         Not used
         """
         opath, dev = args
-        print('iface added')
         mydev = dev.get('org.bluez.Device1', None)
         if mydev is not None:
             self.iface_added_cb(mydev.get('Address', None),
                                 mydev.get('Name', None))
             self.paths2dev[str(opath)] = mydev.get('Address', None)
-            print(self.paths2dev)
 
     def interfaces_removed(self, bus, name, path, iface, signal_name, args, nouse):
         """ When a device is removed, update self.paths2dev, call the callback
@@ -554,8 +552,6 @@ class BTPhone:
         if 'org.bluez.Device1' in ifaces:
             self.iface_removed_cb(self.paths2dev.get(str(opath), None))
             del self.paths2dev[str(opath)]
-            print(self.paths2dev)
-        print('Interface removed - BT')
     
     def signal_subscribe(self, iface, signal_name, callback, args,
                        name=None,

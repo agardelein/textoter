@@ -231,14 +231,12 @@ class TextoterWindow(Gtk.ApplicationWindow):
     def interface_removed(self, dev):
         """ Remove device from the device list
         """
-        print('dev:', dev)
         store = self.dev_store
         iter = store.get_iter_first()
         while iter is not None:
             if store[iter][0] == dev:
                 store.remove(iter)
                 break
-        print('Interface removed - UI', dev)
 
 class TextoterApplication(Gtk.Application):
 
