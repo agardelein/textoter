@@ -2,13 +2,19 @@
 
 import setuptools
 
+# From https://packaging.python.org/guides/making-a-pypi-friendly-readme/
+from os import path
+this_directory = path.abspath(path.dirname(__file__))
+with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
+    long_description = f.read()
+
 setuptools.setup(
     name='textoter',
-    version='0.9',
+    version='0.5',
     author='Arnaud Gardelein',
     author_email='arnaud@oscopy.org',
-    description='A stupid application to send SMS using Bluetooth Phone',
-    long_description='file: README.md',
+    description='Textoter is a simple application that sends SMS using a phone connected via Bluetooth',
+    long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://github.com/agardelein/textoter',
     project_urls={
@@ -16,8 +22,10 @@ setuptools.setup(
         },
     classifiers = [
         'Programming Language :: Python :: 3',
-        'License :: OSI Approved :: MIT License',
-        'operating System :: Linux',
+        'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
+        'Topic :: Communications :: Telephony',
+        'Topic :: Desktop Environment :: Gnome',
+        'Intended Audience :: End Users/Desktop',
         ],
     keywords='gtk sms mms bluetooth phone send texto',
     packages=setuptools.find_packages(where='src'),
@@ -30,6 +38,7 @@ setuptools.setup(
     python_requires='>=3',
     data_files=[
         ('share/textoter', ['data/textoter.glade']),
+        ('share/applications', ['data/textoter.desktop']),
         ]
                  )
 

@@ -1,6 +1,7 @@
 textoter
 ========
-Textoter is a simple application that sends SMS using a phone connected /via/ Bluetooth.
+Sends text messages (SMS) from your mobile phone.
+The mobile phone is connected via Bluetooth.
 It is written as an alternative to the phone's proprietary interface.
 
 ![Screenshot](screenshot.png "Screenshot")
@@ -8,8 +9,9 @@ It is written as an alternative to the phone's proprietary interface.
 Features
 ========
 * Use Bluetooth
-* Import the phone's contacts
-* Contact completion
+* Import contacts from phone
+* Contact name completion
+* Notification on message status
 
 Installing Textoter
 ===================
@@ -20,7 +22,11 @@ To detect phone capabilities, textoter uses `sdptool` from `bluez` package.
 
 Install
 -------
-To install from command line:
+First you may need to install dependencies, for instance on Debian derivatives:
+
+    apt-get install bluez gnome-bluetooth python3-vobject python3-gi
+
+And then textoter:
 
     pip install textoter
 
@@ -30,6 +36,8 @@ To be detected by Textoter, your phone should have been connected at least one t
 
 Starting Textoter
 -----------------
+From GNOME Shell, start to type in the search bar `textoter` and click when it appears.
+
 From command line launch Textoter with:
 
     textoter
