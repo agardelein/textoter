@@ -161,7 +161,8 @@ class TextoterWindow(Gtk.ApplicationWindow):
         port = self.app.actions['ports'].get(my_devad, None)
         res = self.btmessage.create_session(my_devad, port)
         if not res:
-            self.send_notification('No connection with phone', my_devad)
+            iter = self.dev_store.get_iter(self.dev_cbx.get_active())
+            self.send_notification('No connection with phone', 'Unable to send message to {} ({})'.format(self.dev_store.get_value(iter, 1), my_devad))
         else:
             res = self.btmessage.push_message(fp.name)
             self.btmessage.remove_session()
