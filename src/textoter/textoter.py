@@ -101,13 +101,10 @@ class TextoterWindow(Gtk.ApplicationWindow):
         r = Gtk.CellRendererText()
         cbx.pack_start(r, True)
         cbx.add_attribute(r, 'text', 1)
-        numi = 0
-        for dev, name in self.btmessage.get_devices().items():
-            self.dev_store.append([dev, name])
-            if dev == self.app.actions['device'][1]:
-                cbx.set_active(numi)
-            numi = numi + 1
         self.dev_cbx = cbx
+
+        for dev, name in self.btmessage.get_devices().items():
+            self.interface_added(dev, name)
 
     def ok_clicked(self, button):
         # Send message
@@ -207,6 +204,9 @@ class TextoterWindow(Gtk.ApplicationWindow):
         iter = self.dev_store.get_iter(self.dev_cbx.get_active())
         devad = self.dev_store.get_value(iter, 0)
         vcards = self.btmessage.read_phonebook(devad)
+        if not vcards:
+            self.send_notification('No connection with phone', 'Unable to load contacts from {} ({})'.format(self.dev_store.get_value(iter, 1), devad))
+            return
         for vcard in vcards:
             for tel in vcard.contents['tel']:
                 self.ab_store.append([vcard.fn.value,

@@ -91,6 +91,7 @@ class BTPhone:
         list of vcard
         The list of the parsed vcards
         """
+        vcards = []
         # Retrieve the Bluetooth port
         port = self.get_device_port(devad, service_id='0x112f')
 
@@ -98,9 +99,10 @@ class BTPhone:
         self.create_session(devad, port, target='pbap')
         self.select_pb()
         res = self.pullall_pb()
+        if res is None:
+            return vcards
         fn = res[1]['Filename']
         transfer_path = res[0]
-        vcards = []
         status = res[1]['Status']
         
         # Wait for transfer completion
@@ -420,10 +422,12 @@ class BTPhone:
         if name is None:
             name = self.bus_name
         if path is None:
-            path = self.path[0]
+            if self.path is None:
+                return None
+            else:
+                path = self.path[0]
         if bus is None:
             bus = self.bus
-        print(bus)
         try:
             res = bus.call_sync(name,
                                      path,
@@ -522,7 +526,7 @@ class BTPhone:
                                 mydev.get('Name', None))
             self.paths2dev[str(opath)] = mydev.get('Address', None)
 
-    def interfaces_removed(self, bus, name, path, iface, signal_name, args, nouse):
+    def interfaces_removed(self, bus, name, path, iface, signal_name, args, user_args):
         """ When a device is removed, update self.paths2dev, call the callback
 
         Parameters
