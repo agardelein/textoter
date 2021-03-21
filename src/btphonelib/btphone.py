@@ -347,10 +347,10 @@ class BTPhone:
         """ List Phonebook directories
         """
         args = GLib.Variant('(a{sv})', ({},))
-        self.bus_call_sync('org.bluez.obex.PhonebookAccess1',
-                           'List',
-                           args=args
-            )
+        res = self.bus_call_sync('org.bluez.obex.PhonebookAccess1',
+                                 'List',
+                                 args=args
+                                 )
         return res
 
     def get_transfer_status(self, path):

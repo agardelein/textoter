@@ -209,7 +209,9 @@ class TextoterWindow(Gtk.ApplicationWindow):
             self.send_notification('No connection with phone', 'Unable to load contacts from {} ({})'.format(self.dev_store.get_value(iter, 1), devad))
             return
         for vcard in vcards:
-            for tel in vcard.contents['tel']:
+            for tel in vcard.contents.get('tel', [None]):
+                if tel is None:
+                    continue
                 self.ab_store.append([vcard.fn.value,
                                       tel.value,
                                       '', # Type - FIXME TO BE FILLED
