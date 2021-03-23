@@ -13,6 +13,11 @@ Features
 * Contact name completion
 * Notification on message status
 
+Tested on
+---------
+* Samsumg A41
+* Nokia 800 Tough
+
 Installing Textoter
 ===================
 Dependencies
@@ -33,6 +38,7 @@ And then textoter:
 User interface
 ==============
 To be detected by Textoter, your phone should have been connected at least one time with the computer using the [GNOME's Bluetooth interface](https://help.gnome.org/users/gnome-help/stable/bluetooth-connect-device.html.en).
+Some phones even need to be paired with computer.
 
 Starting Textoter
 -----------------
