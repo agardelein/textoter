@@ -10,7 +10,7 @@ with open(path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setuptools.setup(
     name='textoter',
-    version='0.5',
+    version='0.51',
     author='Arnaud Gardelein',
     author_email='arnaud@oscopy.org',
     description='Send SMS from your mobile phone. Phone is connected via Bluetooth',
