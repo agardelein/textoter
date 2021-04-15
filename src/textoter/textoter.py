@@ -274,7 +274,7 @@ class TextoterApplication(Gtk.Application):
         self.config.add_section(section)
 
         # Defaults
-        self.config.set(section, TextoterApplication.HISTORY_LIST, [])
+        self.config.set(section, TextoterApplication.HISTORY_LIST, '')
         self.config.set(section, TextoterApplication.DEVICE, '')
 
     def sanitize_list(self, lst):
