@@ -227,7 +227,17 @@ class TextoterWindow(Gtk.ApplicationWindow):
     def interface_added(self, dev, name):
         """ Update the device list with new device
         """
-        iter = self.dev_store.append([dev, name])
+        store = self.dev_store
+        iter = store.get_iter_first()
+        while iter is not None:
+            if store[iter][0] == dev:
+                # Found item with same address
+                break
+            iter = store.iter_next(iter)
+        if iter is None:
+            iter = store.append([dev, name])
+        else:
+            store.set_row(iter, [dev, name])
         if dev == self.app.actions['device'][1]:
             self.dev_cbx.set_active_iter(iter)
 
@@ -240,6 +250,7 @@ class TextoterWindow(Gtk.ApplicationWindow):
             if store[iter][0] == dev:
                 store.remove(iter)
                 break
+            iter = store.iter_next(iter)
 
 class TextoterApplication(Gtk.Application):
 

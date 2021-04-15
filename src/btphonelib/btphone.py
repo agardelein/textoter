@@ -74,6 +74,8 @@ class BTPhone:
                               bus=self.sysbus,
                               name=DBUS_SYS_NAME,
                               path='/')
+        # Initialize the list on first time
+        self.get_devices()
 
     def read_phonebook(self, devad):
         """ Read the PhoneBook of devad
@@ -264,6 +266,8 @@ class BTPhone:
             mydev = dev.get('org.bluez.Device1', None)
             if mydev is not None:
                 devs[mydev.get('Address', None)] = mydev.get('Name', None)
+                self.interfaces_added(None, None, None, None, None,
+                                    (path, dev), None)
         return devs
         
     def create_session(self, dev=None, port=None, target='map'):
@@ -522,8 +526,9 @@ class BTPhone:
         opath, dev = args
         mydev = dev.get('org.bluez.Device1', None)
         if mydev is not None:
-            self.iface_added_cb(mydev.get('Address', None),
-                                mydev.get('Name', None))
+            if self.iface_added_cb is not None:
+                self.iface_added_cb(mydev.get('Address', None),
+                                    mydev.get('Name', None))
             self.paths2dev[str(opath)] = mydev.get('Address', None)
 
     def interfaces_removed(self, bus, name, path, iface, signal_name, args, user_args):
@@ -554,7 +559,8 @@ class BTPhone:
         """
         opath, ifaces = args[0], args[1]
         if 'org.bluez.Device1' in ifaces:
-            self.iface_removed_cb(self.paths2dev.get(str(opath), None))
+            if self.iface_removed_cb is not None:
+                self.iface_removed_cb(self.paths2dev.get(str(opath), None))
             del self.paths2dev[str(opath)]
     
     def signal_subscribe(self, iface, signal_name, callback, args,
