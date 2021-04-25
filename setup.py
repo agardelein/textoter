@@ -36,6 +36,7 @@ setuptools.setup(
 },
     package_dir={'': 'src'},
     python_requires='>=3',
+    install_requires=['xdg', 'pyxdg', 'vobject', 'PyGObject'],
     data_files=[
         ('share/textoter', ['data/textoter.glade']),
         ('share/applications', ['data/textoter.desktop']),
