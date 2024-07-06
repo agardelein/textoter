@@ -1,0 +1,4 @@
+* Version 0.52
+Fixed issue #1 where Textoter crashed in case of no configuration file
+Fixed issue #2 missing dependency
+Updated documentation

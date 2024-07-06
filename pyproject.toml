@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "textoter"
+version = "0.51"
+authors = [
+    { name="Arnaud Gardelein", email="arnaud@oscopy.org" },
+]
+description="Send SMS from your mobile phone. Phone is connected via Bluetooth"
+# dynamic = ["long_description"]
+readme = "README.md"
+requires-python = ">3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Topic :: Communications :: Telephony",
+    "Topic :: Desktop Environment :: Gnome",
+    "Intended Audience :: End Users/Desktop",
+]
+keywords = ["gtk" ,"sms" ,"mms" ,"bluetooth" ,"phone" ,"send" ,"texto"]
+dependencies = [
+    "xdg",
+    "pyxdg",
+    "vobject",
+    "PyGObject",
+]
+
+[project.urls]
+Homepage = "https://github.com/agardelein/textoter"
+Issues = "https://github.com/agardelein/textoter/issues"
+
+[project.scripts]
+textoter = "textoter:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
